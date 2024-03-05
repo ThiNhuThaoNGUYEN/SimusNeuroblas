@@ -1,0 +1,7 @@
+
+# ignore simulation outputs
+normalization.txt
+trajectory.txt
+*.bak
+alea_*
+backup_*

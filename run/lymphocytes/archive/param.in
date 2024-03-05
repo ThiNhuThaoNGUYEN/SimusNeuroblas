@@ -1,0 +1,13 @@
+#########################
+# Simulation parameters
+#########################
+PRNG_SEED          1421746927
+MAXTIME            240.0
+DT                 0.05
+NICHE              SYNC_CLOCK 0.9
+ADD_POPULATION     20 stem SYNC_CLOCK MOBILE 10 1.0
+
+#########################
+# Cell parameters
+#########################
+R_RATIO            0.90

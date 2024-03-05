@@ -1,0 +1,7 @@
+M_t    C_t     Div_t   death_t   M_t_P0    k_survvial
+0.5    0.0001  0.5     1.0       5.0       10.0
+
+
+
+
+
