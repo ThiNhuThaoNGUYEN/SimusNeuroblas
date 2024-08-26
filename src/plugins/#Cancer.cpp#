@@ -83,13 +83,10 @@ Cancer::Cancer(CellType cellType,
        	 pos,
 	 CellSize(initial_volume, volume_min),
          doubling_time) {
-        pos_.x = 20.0 + (Alea::gaussian_random_0_2());
-        pos_.y = 20.0 + (Alea::gaussian_random_0_2());
-        pos_.z = 20.0 + (Alea::gaussian_random_0_2());
     internal_state_ = new double[odesystemsize_];
     internal_state_[Type] = 1.;
 
-//get_InitPos();
+    get_InitPos();
    
     
     get_GeneParams();
@@ -98,9 +95,8 @@ Cancer::Cancer(CellType cellType,
     TrueJumpCounts_array_ = new int[Number_Of_Genes_];
 
 
-        Protein_array_[0] = 0.4;//KinParam_[8];
-        mRNA_array_[0] = 120.;
-        
+    Protein_array_[0] = 0.4;
+    mRNA_array_[0] = 120.;
         for (u_int32_t j = 1; j < odesystemsize_; j++){
         mRNA_array_[j] = 0.;
         Protein_array_[j] = 0.;
@@ -110,12 +106,11 @@ Cancer::Cancer(CellType cellType,
     Protein_array_[Number_Of_Genes_] = 0.;
     PhantomJumpCounts_ = 0;
 
- /*   cout <<this->id()<<" "<< pos_.x<<endl;
+    cout <<this->id()<<" "<< pos_.x<<endl;
 
     pos_.x = initialP_[(this->id())*3-3];
     pos_.y = initialP_[(this->id())*3-2];
     pos_.z = initialP_[(this->id())*3-1];
-  */
   }
 
 
@@ -138,8 +133,8 @@ Cancer::~Cancer() = default;
 // ============================================================================
 void Cancer::InternalUpdate(const double& dt) {
     
-  if (Protein_array_[0] >= KinParam_[8]) {internal_state_[Type] = 1.;}
-  // else {internal_state_[Type] = 0.;}
+  if (Protein_array_[0] >= 0.4) {internal_state_[Type] = 1.;}
+  // else {internal_state_[Type] = 0.;}   
   /*if (cell_type_ != CellType::NICHE) {
      Cell_update(dt);
      
@@ -371,18 +366,89 @@ Cell* Cancer::Divide(void) {
     
     randomCell = Alea::random();
     
-   
-	        newCell->SetNewProtein_stem_symmetric(K_p, Protein_array_, Number_Of_Genes_);
+    if (this->internal_state_[Type] == 0.){ // proliferation of differentiated cells
+        if (randomCell < 0.5){
+          // molecular content will be equal for two daughters
+            newCell->SetNewProteinLevel1(K_p, Protein_array_, Number_Of_Genes_);
+            newCell->SetNewRNALevel1(K_m, mRNA_array_, Number_Of_Genes_);
+	    newCell->internal_state_[Type] =0.;
+	    // Differentiated cell becomes stem
+            /*if (newCell->Protein_array_[0] >= 0.4* 0.9) { //90% of 0.4 (threshold values for division of a stem cell)
+                newCell->internal_state_[Type] =1.;
+            }
+            else{newCell->internal_state_[Type] =0.;}
+            */
+            this->SetNewProteinLevel2(K_p, Protein_array_, Number_Of_Genes_);
+            this->SetNewRNALevel2(K_m, mRNA_array_, Number_Of_Genes_);
+	    this->internal_state_[Type] =0.;
+            /*
+            if (this->Protein_array_[0] >= 0.4* 0.9) {
+                this->internal_state_[Type] =1.;
+            }
+            else{this->internal_state_[Type] =0.;}
+	    */
+	    }
+
+	
+
+	else{ // randomCell >= 0.5
+            newCell->SetNewProteinLevel2(K_p, Protein_array_, Number_Of_Genes_);
+            newCell->SetNewRNALevel2(K_m, mRNA_array_, Number_Of_Genes_);
+	    newCell->internal_state_[Type] =0.;
+
+	    /*
+            if (newCell->Protein_array_[0] >= 0.4* 0.9) {
+                newCell->internal_state_[Type] =1.;
+            }
+            else{newCell->internal_state_[Type] =0.;}
+            */
+            this->SetNewProteinLevel1(K_p, Protein_array_, Number_Of_Genes_);
+            this->SetNewRNALevel1(K_m, mRNA_array_, Number_Of_Genes_);
+	    this->internal_state_[Type] =0.;
+            /*
+            if (this->Protein_array_[0] >= 0.4* 0.9) {
+                this->internal_state_[Type] =1.;
+            }
+            else{this->internal_state_[Type] =0.;}
+	    */
+	    }
+    }
+    else if (this->internal_state_[Type] == 1.){
+
+      if ( Alea::gaussian_random() < 1.){
+	    newCell->SetNewProtein_stem_symmetric(K_p, Protein_array_, Number_Of_Genes_);
             newCell->SetNewRNA_stem_symmetric(K_m, mRNA_array_, Number_Of_Genes_);
-    if (newCell->Protein_array_[0]> KinParam_[8]) { newCell->internal_state_[Type] =1.;}
-    else{
-        newCell->internal_state_[Type] =0.;}
-    
+            newCell->internal_state_[Type] =1.;
+
             this->SetNewProtein_stem_symmetric(K_p, Protein_array_, Number_Of_Genes_);
             this->SetNewRNA_stem_symmetric(K_m, mRNA_array_, Number_Of_Genes_);
-    if (this->Protein_array_[0]> KinParam_[8]) { this->internal_state_[Type] =1.;}
-    else{
-        this->internal_state_[Type] =0.;}
+            this->internal_state_[Type] =1.;
+	}
+	else {
+	  if (randomCell < 0.5){
+            
+            newCell->SetNewProtein_stem(K_p, Protein_array_, Number_Of_Genes_);
+            newCell->SetNewRNA_stem(K_m, mRNA_array_, Number_Of_Genes_);
+            newCell->internal_state_[Type] =1.;
+            
+            this->SetNewProtein_differentiated(K_p, Protein_array_, Number_Of_Genes_);
+            this->SetNewRNA_differentiated(K_m, mRNA_array_, Number_Of_Genes_);
+            this->internal_state_[Type] =0.;
+        }
+          else{
+            newCell->SetNewProtein_differentiated(K_p, Protein_array_, Number_Of_Genes_);
+            newCell->SetNewRNA_differentiated(K_m, mRNA_array_, Number_Of_Genes_);
+            newCell->internal_state_[Type] =0.;
+            
+            this->SetNewProtein_stem(K_p, Protein_array_, Number_Of_Genes_);
+            this->SetNewRNA_stem(K_m, mRNA_array_, Number_Of_Genes_);
+
+	    this->internal_state_[Type] =1.;
+        }
+    }
+    }
+    
+
   
  // newCell->UpdateType(internal_state_[Type]);
   //  std::cout << "Type " << internal_state_[Type]<<std::endl;
