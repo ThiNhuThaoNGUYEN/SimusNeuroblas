@@ -58,7 +58,7 @@ void Mobile::Move(Cell* cell, const double& dt) const {
   double gravity = 0.2;
   Coordinates<double> dpos{dt * cell->mechanical_force_.x,
                            dt * cell->mechanical_force_.y,
-                           dt * (cell->mechanical_force_.z - gravity)};
+                           dt * (cell->mechanical_force_.z)};// - gravity)};
 
   // Apply displacement
   cell->Move(dpos);
