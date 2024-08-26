@@ -90,6 +90,7 @@ class Simulation
   static int32_t timestep() {return instance_.timestep_;};
   static const OutputManager& output_manager() {
     return instance_.output_manager_;};
+  static double maxtime() {return instance_.max_timestep_;}; 
   // static double maxtime() {return instance_.maxtime_;};
   static const Population& pop() {return *(instance_.pop_);};
   static const std::list<InterCellSignal>& using_signals() { return instance_.using_signals_; };
