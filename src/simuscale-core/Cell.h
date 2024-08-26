@@ -173,7 +173,7 @@ class Cell : public Observable
   double internal_radius() const {return size_.internal_radius();};
   double external_radius() const {return size_.external_radius();};
 
-  virtual bool isCycling() const = 0;
+  //  virtual bool isCycling() const = 0;
   virtual bool isDividing() const = 0;
   virtual bool isDying() const = 0;
 
@@ -196,9 +196,9 @@ class Cell : public Observable
   void Move(Coordinates<double> dpos);
   virtual Coordinates<double> MotileDisplacement(const double& dt);
 
-  virtual void UpdateCyclingStatus() = 0;
-  virtual bool StopCycling() = 0;
-  virtual bool StartCycling() = 0;
+  //virtual void UpdateCyclingStatus() = 0;
+  //virtual bool StopCycling() = 0;
+  //virtual bool StartCycling() = 0;
 
   void AddMechForce(const Cell* other);
   void AddChemCom(const Cell* other);
