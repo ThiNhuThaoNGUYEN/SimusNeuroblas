@@ -89,6 +89,8 @@ class Alea {
    *  using polar form of the Box-Muller transformation */
   static inline double gaussian_random(void);
   static inline double exponential_random(double param);
+    static inline double gaussian_random_0_2(void);
+    static inline int discrete_distribution(int K, const double *P);
 
   void Save(gzFile backup_file) const;
   void Load(gzFile backup_file);
@@ -134,5 +136,16 @@ double Alea::gaussian_random(void) {
 double Alea::exponential_random(double param) {
   return gsl_ran_exponential(instance_.random_number_generator_, param);
 }
+
+
+double Alea::gaussian_random_0_2(void) {
+  return gsl_ran_gaussian(instance_.random_number_generator_, 0.2);
+}
+
+int Alea::discrete_distribution(int K, const double *P) {
+ gsl_ran_discrete_t* f = gsl_ran_discrete_preproc(K,P) ;
+  return gsl_ran_discrete(instance_.random_number_generator_,f);
+  }
+
 
 #endif // SIMUSCALE_ALEA_H__
