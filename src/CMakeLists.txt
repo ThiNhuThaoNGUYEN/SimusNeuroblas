@@ -9,9 +9,9 @@ configure_file(
 # ============================================================================
 # Tell cmake about subdirectories to look into
 # ============================================================================
-add_subdirectory(view)
-add_subdirectory(view_cancer)
-add_subdirectory(populate)
+#add_subdirectory(view)
+#add_subdirectory(view_cancer)
+#add_subdirectory(populate)
 add_subdirectory(simuscale-core)
 
 # ============================================================================
