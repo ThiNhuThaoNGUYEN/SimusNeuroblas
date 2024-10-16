@@ -43,8 +43,9 @@ constexpr uint32_t Cancer::odesystemsize_;
 //                                Constructors
 // ============================================================================
 Cancer::Cancer(const Cancer &model) :
-Cell(model),
-isMitotic_(model.isMitotic_) {
+Cell(model)//,
+//isMitotic_(model.isMitotic_)
+ {
   phylogeny_id_.push_back(this->id());
     phylogeny_t_.push_back(Simulation::sim_time());
     internal_state_ = new double[odesystemsize_];
@@ -70,6 +71,7 @@ isMitotic_(model.isMitotic_) {
 
 
 }
+
 /**
  * Create a new object with the provided constitutive elements and values
  */
@@ -83,14 +85,23 @@ Cancer::Cancer(CellType cellType,
        	 pos,
 	 CellSize(initial_volume, volume_min),
          doubling_time) {
-        pos_.x = 20.0 + (Alea::gaussian_random_0_2());
-        pos_.y = 20.0 + (Alea::gaussian_random_0_2());
-        pos_.z = 20.0 + (Alea::gaussian_random_0_2());
-    internal_state_ = new double[odesystemsize_];
-    internal_state_[Type] = 1.;
 
+        pos_.x = 20.0 + 1.*(Alea::gaussian_random_0_2());
+        pos_.y = 20.0 + 2.*(Alea::gaussian_random_0_2());
+        pos_.z = 20.0 + 3.*(Alea::gaussian_random_0_2());
+  
+  internal_state_ = new double[odesystemsize_];
+    internal_state_[Type] = 1.;
+    internal_state_[S_S] = 0.;
+/*for (u_int32_t j = 0; j < odesystemsize_; j++){
+      internal_state_[j] = 0.;}
+*/
+//cout << cellType<< endl;
+//cellType = CellType::DIFF_S;
+//cout << cellType<< endl;
 //get_InitPos();
-   
+  
+ 
     
     get_GeneParams();
     mRNA_array_ = new double[Number_Of_Genes_];
@@ -98,25 +109,39 @@ Cancer::Cancer(CellType cellType,
     TrueJumpCounts_array_ = new int[Number_Of_Genes_];
 
 
-        Protein_array_[0] = 0.4;//KinParam_[8];
-        mRNA_array_[0] = 120.;
+for (int i = 0; i <  Number_Of_Genes_; i++) {
+ mRNA_array_[i] = 0.;
+ Protein_array_[i]= 0.;
+ TrueJumpCounts_array_[i] = 0;
+}
+
+mRNA_array_[0] += Alea::exponential_random(1./KinParam_[5]);
+
+//cout << "mRNA_array_[0]="<< mRNA_array_[0] << endl;
+Protein_array_[0]+= 2.*KinParam_[8];
+//        Protein_array_[0] = 0.;//KinParam_[8];
+  //      mRNA_array_[0] = 0.;
         
-        for (u_int32_t j = 1; j < odesystemsize_; j++){
-        mRNA_array_[j] = 0.;
+/*        for (u_int32_t j = 0; j < odesystemsize_; j++){
+        mRNA_array_[j] =0.*Alea::random();
         Protein_array_[j] = 0.;
         TrueJumpCounts_array_[j] = 0;
             
         }
-    Protein_array_[Number_Of_Genes_] = 0.;
+*/ 
+   Protein_array_[Number_Of_Genes_] = 0.;
+
     PhantomJumpCounts_ = 0;
 
- /*   cout <<this->id()<<" "<< pos_.x<<endl;
 
-    pos_.x = initialP_[(this->id())*3-3];
-    pos_.y = initialP_[(this->id())*3-2];
-    pos_.z = initialP_[(this->id())*3-1];
-  */
-  }
+//    cout <<this->id()<<" "<< pos_.x<<endl;
+/*
+    pos_.x = initialP_[((this->id())-1)*6+1];
+    pos_.y = initialP_[((this->id())-1)*6+2];
+    pos_.z = initialP_[((this->id())-1)*6+3];
+   cout <<this->id()<<" "<< pos_.x<<endl;
+*/  
+}
 
 
 /**
@@ -131,22 +156,37 @@ Cancer::Cancer(gzFile backup_file) :
 // ============================================================================
 //                                 Destructor
 // ============================================================================
-Cancer::~Cancer() = default;
+Cancer::~Cancer() noexcept {
+  delete [] internal_state_;
+
+    delete [] mRNA_array_;
+    delete [] Protein_array_;
+    delete [] TrueJumpCounts_array_;
+//    delete [] ThinningParam_array_;
+
+    delete [] GenesInteractionsMatrix_;
+    delete [] KinParam_;
+}
 
 // ============================================================================
 //                                   Methods
 // ============================================================================
 void Cancer::InternalUpdate(const double& dt) {
     
-  if (Protein_array_[0] >= KinParam_[8]) {internal_state_[Type] = 1.;}
-  // else {internal_state_[Type] = 0.;}
-  /*if (cell_type_ != CellType::NICHE) {
-     Cell_update(dt);
-     
-     }
-     */
- 
-   if (cell_type_ != CellType::NICHE) {
+  if (Protein_array_[0] >= KinParam_[8]) {internal_state_[Type] = 1.;
+} else {internal_state_[Type] = 0.;}
+//cout << "cellType" << CellType::DIFF_S << endl;
+
+/*
+if (this->internal_state_[Type] == 1.){cell_type_ = CellType::STEM;
+   }
+else {
+ cell_type_ = CellType::DIFF_S;
+}
+
+cout << "cell_type()"<< CellType_Names.at(this->cell_type()).c_str()<< endl; 
+  */
+ if (cell_type_ != CellType::NICHE) {
    // if (Protein_array_[0] >0.9) {internal_state_[Type] = 1.;} //stem
     ODE_update(dt);
 
@@ -159,22 +199,90 @@ void Cancer::InternalUpdate(const double& dt) {
 
 Grow(dt);
 }
-/*void Cancer::Cell_update(const double& dt){
-  int C;
-   if (this->pos_x()==20. && this->pos_y()==20. && this->pos_z()==20.)
-	{
 
-cout << this->id()<<endl;}
-if ( Simulation::pop().Size()>4000 && this->id()==5){ internal_state_[Type] = 1.;}
+Coordinates<double> Cancer::MotileDisplacement(const double& dt) {
+ 
+  std::vector<Cell*> neighb = neighbours();
+  auto cell_it = neighb.begin();
+  bool contact_S = false;
+  bool contact_D = false;
+   while ( cell_it != neighb.end() ) {
+     //if stem cells contact
+    if ( (*cell_it)->cell_type() == STEM ) {
+      contact_S = true;
+      break;
+    }
+  if ( (*cell_it)->cell_type() == DIFF_S) {
+      contact_D = true;
+      break;
+    }
+    
+    cell_it++;
+   }
+   double sigma_t;
+   if ( contact_S ){
+      sigma_t = KinParam_[10];}
+   else if( contact_D ){
+      sigma_t = 0.05;}
+   else {sigma_t = 0.1;}
+  Coordinates<double> displ { sqrt(dt)*sigma_t*Alea::gaussian_random(),
+                              sqrt(dt)*sigma_t*Alea::gaussian_random(),
+                              sqrt(dt)*sigma_t*Alea::gaussian_random() };
+  return displ;
 }
-*/
+
 
 void Cancer::ODE_update(const double& dt){
 
-
 double t = 0., t1 = dt;
-     
-           // Here: PDMP (intracellular signalling)*
+ 
+/*if (internal_state_[Type]==1.){
+        
+
+std::vector<Cell*> neighb = neighbours();
+  auto cell_it = neighb.begin();
+  bool contact_S = false;
+  double N_contact = 0.;
+  while ( cell_it != neighb.end() ) {
+
+  if ( (*cell_it)->cell_type() == NONE && (internal_state_[Type] = 1.)) {
+
+ contact_S = true;
+ N_contact += 1.;
+//    break;
+    }
+    cell_it++;
+   }
+  // have TCC signaling because it contacted the effector cell
+   if ( contact_S ) {
+     internal_state_[S_S] = std::min(getInSignal(InterCellSignal::STEM_CONTACT), N_contact);
+//cout <<"internal_state_[S_S]" << internal_state_[S_S]<< endl;
+    }
+
+neighb.clear();
+     }
+   */
+if (this->internal_state_[Type] == 1.){cell_type_ = CellType::STEM;
+   }else {
+ cell_type_ = CellType::DIFF_S;}
+//cout << cell_type_ << endl;
+ 
+ switch (cell_type_) {
+        case STEM:
+        {
+
+      internal_state_[S_S] = getInSignal(InterCellSignal::STEM_CONTACT);
+//cout <<"internal_state_[S_S]" << internal_state_[S_S]<< endl;
+break;
+}
+   case DIFF_S:
+{
+    internal_state_[S_S] = 0.;
+break;}
+}
+//cout <<"internal_state_[S_S]" << internal_state_[S_S]<< endl;
+
+       // Here: PDMP (intracellular signalling)*
            // from harissa/simulation/pdmp.py
            // Default bursting parameters
            double a0 = KinParam_[3]; //0;
@@ -238,7 +346,7 @@ double t = 0., t1 = dt;
                if ((ithGene_ < Number_Of_Genes_)&&(ithGene_ >= 0)) {// i represents a real gene, it's a true jump
                    jump = true;
                    TrueJumpCounts_array_[ithGene_] += 1;
-                   mRNA_array_[ithGene_] += Alea::exponential_random(1./r);
+                 mRNA_array_[ithGene_] += Alea::exponential_random(1./r);
                } else {
                    PhantomJumpCounts_ += 1;
                }
@@ -258,7 +366,7 @@ double t = 0., t1 = dt;
                }
                
                
-               Get_Sigma(Sigma, PPmax, false);
+               Get_Sigma(Sigma, PPmax, false, internal_state_[S_S], KinParam_[9]);
                
                for (u_int32_t i = 0; i < Number_Of_Genes_; i++) {
                    
@@ -277,13 +385,13 @@ double t = 0., t1 = dt;
                // ----------------- Construct probability array ----------
                double Proba_no_jump = 1.;
                
-               Get_Sigma(Sigma, Protein_array_, true);
+               Get_Sigma(Sigma, Protein_array_, true, internal_state_[S_S], KinParam_[9]);
                
                for (u_int32_t i = 0; i < Number_Of_Genes_; i++) {
                    
                    KKon[i] = (1. - Sigma[i]) * K0 + Sigma[i]*K1;
                    ProbaArray[i] = KKon[i] / Tau;
-                   
+               //cout << ProbaArray[i] << endl;    
                    Proba_no_jump = Proba_no_jump - ProbaArray[i];
                }
                
@@ -314,9 +422,13 @@ double t = 0., t1 = dt;
            delete [] ProbaArray;
            delete [] KKon;
            delete [] S1;
-           }
-    
 
+//            break;
+
+ }
+
+            
+/*
 Coordinates<double> Cancer::MotileDisplacement(const double& dt) {
   // <TODO> Motile cell autonomous displacement behaviour
 //  Coordinates<double> displ = dt*0.02*Alea::gaussian_random();
@@ -327,7 +439,7 @@ double sigma_t = 0.1;
   return displ;
 
 }
-
+*/
 double num_division = 0.;
 void Cancer::UpdatePhylogeny(vector<int> phy_id, vector<double> phy_t, int sz) {
     phylogeny_id_.insert(phylogeny_id_.begin(), phy_id.begin(), phy_id.end());
@@ -336,6 +448,9 @@ void Cancer::UpdatePhylogeny(vector<int> phy_id, vector<double> phy_t, int sz) {
 void Cancer::UpdateType(double Mother_type) {
       internal_state_[Type] =  Mother_type;
 }
+
+
+
 Cell* Cancer::Divide(void) {
     // <TODO> Determine how the cell should divide </TODO>
     Cancer* newCell = new Cancer(*this);
@@ -498,7 +613,10 @@ void Cancer::Update_count_division( double Mother_division,const int s )const {
   Protein_array_[s]  = Mother_division;
 
   }
-void Cancer::Get_Sigma( double *Sigma_i ,double * P, bool AcceptNegative ) {
+
+
+//############sigma#######
+void Cancer::Get_Sigma( double *Sigma_i ,double * P, bool AcceptNegative, double S_S, const double x ) {
 
 double Parr[Number_Of_Genes_];
  memcpy(Parr, P, Number_Of_Genes_ * sizeof (*P));
@@ -508,9 +626,15 @@ double Parr[Number_Of_Genes_];
 
 
   for (u_int32_t i = 0; i < Number_Of_Genes_; i++) {
+ //if ( i == 0){ initval_i[i] = -3.0;}
 // Basal activity for other genes                                                                                                                                                               
- initval_i[i] = -5.0;
-
+  //else {initval_i[i] = -5.0;}
+if ( i == 0){
+  initval_i[i] = -3.0;
+//   if (Protein_array_[(Number_Of_Genes_)] < 1.) {
+   if (S_S > 0.) {initval_i[i] += S_S*x;}
+}
+else {initval_i[i] = -5.0;}
  for (u_int32_t j = 0; j < Number_Of_Genes_; j++) {
    interIJ = GenesInteractionsMatrix_[i + Number_Of_Genes_ * j]; // J acts on I                                                                                                                 
     if (((interIJ > 0.)||AcceptNegative)) {
@@ -576,7 +700,9 @@ string filename ="kineticsparam.txt";
         else {
             KinParam_[iter] = a;
             iter = iter + 1;
-        }
+        
+//cout <<a<< "\t"; 
+}
     }
 
     indatakin.close();
@@ -606,6 +732,7 @@ string filename ="kineticsparam.txt";
 
     GenesInteractionsMatrix_ = new double[Number_Of_Genes_ * Number_Of_Genes_];
 
+//cout << "GenesInteractionsMatrix_" << Number_Of_Genes_ << endl;
 
      while (std::getline(indataf, line)) {
         std::istringstream iss(line);
@@ -619,6 +746,7 @@ string filename ="kineticsparam.txt";
             else {
                 GenesInteractionsMatrix_[(j + Number_Of_Genes_ * i)] = a;
                 j = j + 1;
+//cout<< a<< "\t";
             }
         }
     i = i + 1;
@@ -637,18 +765,18 @@ std::vector<double>  initialPos;
 
 ifstream indataP; // indata
 
-string filename = "Coordinate_0_1421746920.txt";
+string filename = "initpop.txt";
 
  indataP.open(filename); // opens the file
   if (!indataP) { // file couldn't be opened
         std::cerr << "Error: file Pos_0.txt could not be opened" << std::endl;
-  initialP_ = new double[3*15];
-
-  for (u_int32_t i = 0; i < 3*15; i++){
+  initialP_ = new double[6*15];
+//cout << "Simulation::pop().Size()"<< Simulation::pop().Size()<<endl;
+  /*for (u_int32_t i = 0; i < 6*15; i++){
     initialP_[i]= 0.;
-    indataP.close();
+  //  indataP.close();
     }
-
+*/
   }
     std::string line;
     double val;
@@ -659,7 +787,7 @@ while (std::getline(indataP, line)) {
   // Number_Tcells += 1;
         std::istringstream Vss(line);
         l = 0;
-        while ( l < 3) {
+        while ( l < 6) {
             if ((!(Vss >> val))) {
                 std::cerr << "Error: Value missing in position/character" << std::endl;
                 break;
@@ -672,14 +800,15 @@ while (std::getline(indataP, line)) {
         c = c + 1;
         }
 
-    initialP_ =new double[3*15];
+    initialP_ =new double[6*15];
     indataP.close();
     
-    for (u_int32_t i = 0; i < 3*15; i++){
+/*    for (u_int32_t i = 0; i < 6*15; i++){
     initialP_[i]=initialPos.at(i);
-    cout <<initialP_[i]<< "\t"<<endl;
+    cout <<initialP_[i]<< "\t";
       }
-    return 0.0;
+*/  
+  return 0.0;
 }
 
 
@@ -697,6 +826,8 @@ switch (signal) {
       return  internal_state_[Type]; 
  case InterCellSignal::VOLUME:
             return outer_volume();
+  case InterCellSignal::STEM_CONTACT:
+            return internal_state_[S_S];
   case InterCellSignal::CANCER_S:
             return Protein_array_[0];
       case InterCellSignal::CANCER_D1:
@@ -737,10 +868,11 @@ bool Cancer::isDividing() const {
 
   //  return (Protein_array_[3] >= KinParam_[6] && size_.may_divide());
   
-    if (internal_state_[Type] > 0.){
+/*    if (internal_state_[Type] > 0.){
            return (Protein_array_[3] >= KinParam_[7] && size_.may_divide());}
       else {
-          return (Protein_array_[3] >= KinParam_[6] && size_.may_divide());}
+*/  
+     return (Protein_array_[3] >= KinParam_[6] && size_.may_divide());//}
 
   
 }
@@ -748,7 +880,7 @@ bool Cancer::isDividing() const {
 bool Cancer::isDying() const {
   // <TODO> Should the cell die now ? </TODO>
   // cell is immortal
-  return (Protein_array_[2] >= 0.5) ;
+  return (Protein_array_[2] >= 0.1) ;
 
 // return false;
 }

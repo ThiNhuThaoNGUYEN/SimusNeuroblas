@@ -22,7 +22,7 @@ class Cancer : public Cell {
 
  public :
  typedef enum {
-      Type 
+      Type, S_S 
     } StateVariable;
 
 
@@ -83,7 +83,7 @@ class Cancer : public Cell {
   Coordinates<double> MotileDisplacement(const double& dt) override;
   void Cell_update(const double& dt);  
   void UpdateType(double Mother_type); 
-  void Get_Sigma( double * sigma, double * P, bool AcceptNegative);
+  void Get_Sigma( double * sigma, double * P, bool AcceptNegative, double S_S, const double x);
   void Intracellular_ExactEvol(double DeltaT, double * P, double * M, double * S1);
   void ODE_update(const double& dt);
   void UpdatePhylogeny(std::vector<int> phy_id, std::vector<double> phy_t, int sz);
@@ -115,7 +115,7 @@ class Cancer : public Cell {
  protected:
   // <TODO> Add your formalism-specific attributes here </TODO>
 
-  static constexpr uint32_t odesystemsize_ = 1;
+  static constexpr uint32_t odesystemsize_ = 2;
   double* internal_state_;
   double* initialP_;
   //int Number_cells = 0;
@@ -129,7 +129,7 @@ class Cancer : public Cell {
   double* KinParam_;
   double* Remember_division_ ;
   int Number_Of_Genes_;
-  int Number_Of_Parameters_ = 9;
+  int Number_Of_Parameters_ = 11;
   bool isMitotic_ = false; // distinguishes cells about to divide
   double Time_NextJump_ = 0.;
   int ithGene_;
