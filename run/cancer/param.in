@@ -2,9 +2,11 @@
 # Simulation parameters
 #########################
 PRNG_SEED          1421746927
-MAXTIME            500.0
+MAXTIME            1000000.0
 DT                 0.1 
-ADD_POPULATION     15 NONE CANCER MOBILE 10 1.0
+ADD_POPULATION     15 STEM CANCER MOTILE 10 1.0
+
+
 USECONTACTAREA     1 
 
 #########################
@@ -16,6 +18,7 @@ R_RATIO            0.90
 # Output parameters
 #########################
 SIGNAL  CANCER_TYPE
+SIGNAL  STEM_CONTACT
 SIGNAL	VOLUME
 SIGNAL	REMEMBER_DIVISION
 SIGNAL	CANCER_S
@@ -26,5 +29,3 @@ SIGNAL	CANCER_mRNA_S
 SIGNAL	CANCER_mRNA_D1
 SIGNAL	CANCER_mRNA_D2
 SIGNAL	CANCER_mRNA_P
-
-
