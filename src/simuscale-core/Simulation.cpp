@@ -173,7 +173,7 @@ void Simulation::DoSetup(const SimulationParams& simParams,
 void Simulation::DoRun() {
   while(timestep_ < max_timestep_) {
     Update();
-    if (Simulation::pop().Size() >= 3001) break;
+    if (Simulation::pop().Size() >= 30000) break;
   }
   Finalize();
 }
