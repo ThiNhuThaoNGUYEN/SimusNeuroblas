@@ -24,6 +24,7 @@ using std::vector;
 #include "Simulation.h"
 #include "Alea.h"
 #include "Coordinates.h"
+#include "WorldSize.cpp"
 #include "Cell.h"
 using std::unique_ptr;
 using std::shared_ptr;
@@ -86,9 +87,9 @@ Cancer::Cancer(CellType cellType,
 	 CellSize(initial_volume, volume_min),
          doubling_time) {
 
-        pos_.x = 20.0 + 1.*(Alea::gaussian_random_0_2());
-        pos_.y = 20.0 + 2.*(Alea::gaussian_random_0_2());
-        pos_.z = 20.0 + 3.*(Alea::gaussian_random_0_2());
+        pos_.x = WorldSize::size().x/2. + 2.*(Alea::gaussian_random_0_2());
+        pos_.y = WorldSize::size().y/2. + 3.*(Alea::gaussian_random_0_2());
+        pos_.z = WorldSize::size().z/2. + 4.*(Alea::gaussian_random_0_2());
   
   internal_state_ = new double[odesystemsize_];
     internal_state_[Type] = 1.;
@@ -96,9 +97,7 @@ Cancer::Cancer(CellType cellType,
 /*for (u_int32_t j = 0; j < odesystemsize_; j++){
       internal_state_[j] = 0.;}
 */
-//cout << cellType<< endl;
 //cellType = CellType::DIFF_S;
-//cout << cellType<< endl;
 //get_InitPos();
   
  

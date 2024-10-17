@@ -73,6 +73,7 @@ class SimulationParams {
   bool autoseed() const { return autoseed_; };
   int32_t seed() const { return seed_; };
   double maxtime() const { return maxtime_; };
+  int32_t maxpop() const { return maxpop_; };
   double dt() const { return dt_; };
   double backup_dt() const { return backup_dt_; };
   // TODO(dpa) constness
@@ -115,6 +116,7 @@ class SimulationParams {
   int32_t seed_ = 0;
   /** default time span */
   double maxtime_ = 200.0;
+  int32_t maxpop_ = 200;
   /** default macroscopic time step */
   double dt_ = 0.2; // We aim at a code working with DT=0.5 or DT=1
   double backup_dt_ = 10.0; // Frequency of backups

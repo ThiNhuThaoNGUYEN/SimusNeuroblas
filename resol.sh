@@ -12,7 +12,7 @@ module purge
 module use /applis/PSMN/debian11/E5/modules/all
 module load GCC/10.3.0
 module load GSL
-cd cancer_simuscale
+#cd cancer_simuscale
 rm -rf build
 mkdir build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=/home/tnguye22/bin ..

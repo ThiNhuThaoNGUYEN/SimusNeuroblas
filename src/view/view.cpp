@@ -97,7 +97,7 @@ int _line = 0;
 int _pause = 0;
 int _end_of_file = 0;
 int _skipframe = 1;
-int _background_white = 0;
+int _background_white = 0; // 1 for black
 char _colormap_name = 'j'; /* default colormap: jet */
 int _clipcell = 0;
 enum guides { GUIDE_NONE, GUIDE_BORDER, GUIDE_VIEWCUT, GUIDE_BORDER_VIEWCUT };
@@ -953,7 +953,7 @@ void display(void)
   glColor3f(0.8 - 0.7*_font_color[0],0.8 - 0.7*_font_color[1],0.8 - 0.7*_font_color[2]);
   glWindowPos2i(10, 10);
   glBitmap(8, 16, 0.0, 0.0, 8, 0, raster_left);
-  for(auto i = 0; i < 40; i++)
+  for(auto i = 0; i < 40; i++) //50 for more space in the box
   {
     glBitmap(8, 16, 0.0, 0.0, 8, 0, raster_rect);
   }

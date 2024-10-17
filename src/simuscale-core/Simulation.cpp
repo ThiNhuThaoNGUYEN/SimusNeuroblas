@@ -118,6 +118,7 @@ void Simulation::DoSetup(const SimulationParams& simParams,
       static_cast<int32_t>(round(simParams.backup_dt() / simParams.dt()));
   max_timestep_ =
       static_cast<int32_t>(round(simParams.maxtime() / simParams.dt()));
+  max_pop_ = simParams.maxpop() ; 
 
   // Seed PRNG
   if (simParams.autoseed())
@@ -173,7 +174,7 @@ void Simulation::DoSetup(const SimulationParams& simParams,
 void Simulation::DoRun() {
   while(timestep_ < max_timestep_) {
     Update();
-    if (Simulation::pop().Size() >= 30000) break;
+    if (Simulation::pop().Size() >= max_pop_) break;
   }
   Finalize();
 }

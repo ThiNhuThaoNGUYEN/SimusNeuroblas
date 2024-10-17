@@ -131,6 +131,8 @@ class Simulation
   int32_t timestep_;
   /** Number of timesteps to be simulated */
   int32_t max_timestep_;
+  /** Number of Maxpop to be simulated */
+  int32_t max_pop_;
   /** Delta time between 2 time steps */
   double dt_;
   /** Number of timesteps between 2 backups */

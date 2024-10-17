@@ -88,6 +88,10 @@ void ParamFileReader::interpret_line(f_line* line) {
   else if (strcmp(line->words[0], "MAXTIME") == 0) {
     simParams.maxtime_ = atof(line->words[1]);
   }
+  
+  else if (strcmp(line->words[0], "MAXPOP") == 0) {
+    simParams.maxpop_ = atof(line->words[1]);
+  }
   else if (strcmp(line->words[0], "DT") == 0) {
     simParams.dt_ = atof(line->words[1]);
   }
