@@ -62,6 +62,10 @@ int main(int argc, char* argv[]) {
   string input_dir;
   string output_dir;
   double resume_time = -1;
+ 
+  double time_spent = 0.0;
+  clock_t begin = clock();
+
 
   interpret_cmd_line_options(argc, argv, input_dir, output_dir, resume_time);
 
@@ -84,6 +88,14 @@ int main(int argc, char* argv[]) {
 
   cout << endl;
   cout << "End of simulation." << endl;
+
+  clock_t end = clock();
+  
+    // calculate elapsed time by finding difference (end - begin) and
+    // dividing the difference by CLOCKS_PER_SEC to convert to seconds
+    time_spent += (double)(end - begin) / CLOCKS_PER_SEC;
+
+    printf("The elapsed time is %f seconds \n", time_spent);
 
   return 0;
 }

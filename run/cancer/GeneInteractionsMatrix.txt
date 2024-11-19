@@ -1,5 +1,5 @@
 Gene	GeneS	GeneD1	GeneD2	GeneP 
 GeneS	15.0	-40.0	-2.0    -2.0
-GeneD1	-40.0	15.0	-2.0    10.0
+GeneD1	-40.0	15.0	-2.0    250.0
 GeneD2	0.0	0.0	0.0	0.0
 GeneP	0.0	0.0	0.0	0.0

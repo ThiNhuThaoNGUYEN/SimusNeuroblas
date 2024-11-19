@@ -81,7 +81,7 @@ class SimulationParams {
   const NicheParams& niche_params() const { return niche_params_; };
   const CellParams& cell_params() const { return cell_params_; };
   const WorldSizeParams& worldsize_params() const { return worldsize_params_; };
-  bool usecontactarea() const { return usecontactarea_; };
+  bool usecontactarea() const { return usecontactarea_>0.; };
   bool output_orientation() const { return output_orientation_; };
 
 

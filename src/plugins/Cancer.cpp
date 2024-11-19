@@ -116,7 +116,7 @@ for (int i = 0; i <  Number_Of_Genes_; i++) {
 
 mRNA_array_[0] += Alea::exponential_random(1./KinParam_[5]);
 
-//cout << "mRNA_array_[0]="<< mRNA_array_[0] << endl;
+cout << Simulation::usecontactarea() << endl;
 Protein_array_[0]+= 2.*KinParam_[8];
 //        Protein_array_[0] = 0.;//KinParam_[8];
   //      mRNA_array_[0] = 0.;
@@ -172,8 +172,8 @@ Cancer::~Cancer() noexcept {
 // ============================================================================
 void Cancer::InternalUpdate(const double& dt) {
     
-  if (Protein_array_[0] >= KinParam_[8]) {internal_state_[Type] = 1.;
-} else {internal_state_[Type] = 0.;}
+//  if (Protein_array_[0] >= KinParam_[8]) {internal_state_[Type] = 1.;
+//} else {internal_state_[Type] = 0.;}
 //cout << "cellType" << CellType::DIFF_S << endl;
 
 /*
@@ -205,6 +205,10 @@ Coordinates<double> Cancer::MotileDisplacement(const double& dt) {
   auto cell_it = neighb.begin();
   bool contact_S = false;
   bool contact_D = false;
+  bool contact_SD = false;
+ switch (cell_type_) {
+        case STEM:
+        {
    while ( cell_it != neighb.end() ) {
      //if stem cells contact
     if ( (*cell_it)->cell_type() == STEM ) {
@@ -212,18 +216,42 @@ Coordinates<double> Cancer::MotileDisplacement(const double& dt) {
       break;
     }
   if ( (*cell_it)->cell_type() == DIFF_S) {
-      contact_D = true;
+      contact_SD = true;
       break;
     }
     
     cell_it++;
    }
+}
+case DIFF_S:
+{
+while ( cell_it != neighb.end() ) {
+     //if stem cells contact
+    if ( (*cell_it)->cell_type() == STEM ) {
+      contact_SD = true;
+      break;
+    }
+  if ( (*cell_it)->cell_type() == DIFF_S) {
+      contact_D = true;
+      break;
+    }
+
+    cell_it++;
+   }
+}
+}
    double sigma_t;
-   if ( contact_S ){
+if ( contact_S){
       sigma_t = KinParam_[10];}
+   else if ( contact_S && contact_SD){
+      sigma_t = KinParam_[10];}
+else if ( contact_S && contact_D){
+      sigma_t = KinParam_[10];}
+  else if( contact_SD ){
+      sigma_t = KinParam_[11];}
    else if( contact_D ){
-      sigma_t = 0.05;}
-   else {sigma_t = 0.1;}
+      sigma_t = KinParam_[11];}
+   else {sigma_t = KinParam_[12];}
   Coordinates<double> displ { sqrt(dt)*sigma_t*Alea::gaussian_random(),
                               sqrt(dt)*sigma_t*Alea::gaussian_random(),
                               sqrt(dt)*sigma_t*Alea::gaussian_random() };
@@ -506,7 +534,7 @@ Cell* Cancer::Divide(void) {
   phylogeny_t_.push_back(Simulation::sim_time());
 
   if ( ( phylogeny_ID_file_ = fopen(phylogeny_ID_filename,"a") ) != NULL ) {
-    fprintf(phylogeny_ID_file_, "%d -> %d , t= %f \n", this->id(),  newCell-> id(),  Simulation::sim_time());
+    fprintf(phylogeny_ID_file_, "%d\t%d\t%f\n", this->id(),  newCell-> id(),  Simulation::sim_time());
       fclose(phylogeny_ID_file_);
     }
     if ( ( phylogeny_T_file_ = fopen(phylogeny_T_filename,"a") ) != NULL ) {

@@ -129,7 +129,7 @@ class Cancer : public Cell {
   double* KinParam_;
   double* Remember_division_ ;
   int Number_Of_Genes_;
-  int Number_Of_Parameters_ = 11;
+  int Number_Of_Parameters_ = 13;
   bool isMitotic_ = false; // distinguishes cells about to divide
   double Time_NextJump_ = 0.;
   int ithGene_;
