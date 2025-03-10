@@ -309,7 +309,7 @@ void Cell::AddMechForce(const Cell* other) {
   }
   
   // max_force should not be too large (~0.25-0.5 for Lennard-Jones force)
-  double max_force = 0.5;
+  double max_force = 0.9;
   static constexpr double LJFACTOR = 1.122462048309373;
 
   auto dpos = other->pos_ - pos_;

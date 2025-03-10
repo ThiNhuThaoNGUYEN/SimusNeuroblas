@@ -203,9 +203,9 @@ Coordinates<double> Cancer::MotileDisplacement(const double& dt) {
  
   std::vector<Cell*> neighb = neighbours();
   auto cell_it = neighb.begin();
-  bool contact_S = false;
-  bool contact_D = false;
-  bool contact_SD = false;
+  bool contact_S = false;//contact S-S
+  bool contact_D = false;//contact D-D
+  bool contact_SD = false; //contact S-D
  switch (cell_type_) {
         case STEM:
         {
@@ -250,8 +250,8 @@ else if ( contact_S && contact_D){
   else if( contact_SD ){
       sigma_t = KinParam_[11];}
    else if( contact_D ){
-      sigma_t = KinParam_[11];}
-   else {sigma_t = KinParam_[12];}
+      sigma_t = KinParam_[12];}
+   else {sigma_t = KinParam_[13];}
   Coordinates<double> displ { sqrt(dt)*sigma_t*Alea::gaussian_random(),
                               sqrt(dt)*sigma_t*Alea::gaussian_random(),
                               sqrt(dt)*sigma_t*Alea::gaussian_random() };
