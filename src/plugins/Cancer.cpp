@@ -44,9 +44,7 @@ constexpr uint32_t Cancer::odesystemsize_;
 //                                Constructors
 // ============================================================================
 Cancer::Cancer(const Cancer &model) :
-Cell(model)//,
-//isMitotic_(model.isMitotic_)
- {
+Cell(model){
   phylogeny_id_.push_back(this->id());
     phylogeny_t_.push_back(Simulation::sim_time());
     internal_state_ = new double[odesystemsize_];
@@ -93,14 +91,7 @@ Cancer::Cancer(CellType cellType,
   
   internal_state_ = new double[odesystemsize_];
     internal_state_[Type] = 1.;
-    internal_state_[S_S] = 0.;
-/*for (u_int32_t j = 0; j < odesystemsize_; j++){
-      internal_state_[j] = 0.;}
-*/
-//cellType = CellType::DIFF_S;
-//get_InitPos();
-  
- 
+    internal_state_[S_S] = 0.; 
     
     get_GeneParams();
     mRNA_array_ = new double[Number_Of_Genes_];
@@ -116,7 +107,6 @@ for (int i = 0; i <  Number_Of_Genes_; i++) {
 
 mRNA_array_[0] += Alea::exponential_random(1./KinParam_[5]);
 
-cout << Simulation::usecontactarea() << endl;
 Protein_array_[0]+= 2.*KinParam_[8];
  
 Protein_array_[Number_Of_Genes_] = 0.;
@@ -224,11 +214,41 @@ else if ( contact_S && contact_D){
   return displ;
 }
 
+double Cancer::count_Neib_Stem(){
+std::vector<Cell*> neighb = neighbours();
+  auto cell_it = neighb.begin();
+  double count_S = 0.;//contact S-S
+  while ( cell_it != neighb.end() ) {
+     //if stem cells contact
+  double mean_radis = ((*cell_it)->external_radius() + external_radius()) / 2.;
+  double h= mean_radis - Distance(*cell_it)/2.;
+  if (h>0. && (*cell_it)->cell_type() == STEM ) {
+      count_S += 1.;
+}
+ cell_it++;
+}
+return count_S;
+}
+
+double Cancer::count_Neib_Syp(){
+std::vector<Cell*> neighb = neighbours();
+  auto cell_it = neighb.begin();
+  double count_D = 0.;//contact D-D
+  while ( cell_it != neighb.end() ) {
+     //if stem cells contact
+  double mean_radis = ((*cell_it)->external_radius() + external_radius()) / 2.;
+  double h= mean_radis - Distance(*cell_it)/2.;
+  if (h>0. && (*cell_it)->cell_type() == DIFF_S ) {
+      count_D += 1.;
+}
+ cell_it++;
+}
+return count_D;
+}
 
 void Cancer::ODE_update(const double& dt){
 
 double t = 0., t1 = dt;
- 
 
 if (this->internal_state_[Type] == 1.){cell_type_ = CellType::STEM;
    }else {
@@ -238,12 +258,16 @@ if (this->internal_state_[Type] == 1.){cell_type_ = CellType::STEM;
         case STEM:
         {
 
-      internal_state_[S_S] = getInSignal(InterCellSignal::STEM_CONTACT);
+internal_state_[S_S] = count_Neib_Stem();
+
+ internal_state_[D_D] = 0.;
+
 break;
 }
    case DIFF_S:
 {
     internal_state_[S_S] = 0.;
+internal_state_[D_D] = count_Neib_Syp();
 break;}
 }
 
@@ -331,7 +355,7 @@ break;}
                }
                
                
-               Get_Sigma(Sigma, PPmax, false, internal_state_[S_S], KinParam_[9]);
+               Get_Sigma(Sigma, PPmax, false, internal_state_[S_S], KinParam_[9], internal_state_[D_D], KinParam_[14]);
                
                for (u_int32_t i = 0; i < Number_Of_Genes_; i++) {
                    
@@ -350,7 +374,7 @@ break;}
                // ----------------- Construct probability array ----------
                double Proba_no_jump = 1.;
                
-               Get_Sigma(Sigma, Protein_array_, true, internal_state_[S_S], KinParam_[9]);
+               Get_Sigma(Sigma, Protein_array_, true, internal_state_[S_S], KinParam_[9],internal_state_[D_D], KinParam_[14]);
                
                for (u_int32_t i = 0; i < Number_Of_Genes_; i++) {
                    
@@ -414,36 +438,16 @@ Cell* Cancer::Divide(void) {
     
     num_division += 1.;
     
-    double m = 20.;
-    
-    double a = 10.;
-    double K_p, K_m;
-    double randomCell;
-    
-    K_p = 1.0 - (m / 100.)* Alea::gaussian_random_0_2();
-    K_m = 1.0 - (a / 100.)* Alea::gaussian_random_0_2();
-    
-    
-    if ( K_p >= 2. || K_m >= 2. || K_p < 0. || K_m < 0.) {
-        cout << "negative,**************************************** "  << K_p<< K_m << endl;
-        K_p = 1.0 - (m / 100.)* Alea::gaussian_random_0_2();
-        K_m = 1.0 - (a / 100.)* Alea::gaussian_random_0_2();
-        
-    }
-    
-    //divide molecular content into two daughter cells
-    
-    randomCell = Alea::random();
-    
+    //divide molecular content into two daughter cells    
    
-	        newCell->SetNewProtein_stem_symmetric(K_p, Protein_array_, Number_Of_Genes_);
-            newCell->SetNewRNA_stem_symmetric(K_m, mRNA_array_, Number_Of_Genes_);
+	        newCell->SetNewProtein_stem_symmetric(Protein_array_, Number_Of_Genes_);
+            newCell->SetNewRNA_stem_symmetric(mRNA_array_, Number_Of_Genes_);
     if (newCell->Protein_array_[0]> KinParam_[8]) { newCell->internal_state_[Type] =1.;}
     else{
         newCell->internal_state_[Type] =0.;}
     
-            this->SetNewProtein_stem_symmetric(K_p, Protein_array_, Number_Of_Genes_);
-            this->SetNewRNA_stem_symmetric(K_m, mRNA_array_, Number_Of_Genes_);
+            this->SetNewProtein_stem_symmetric(Protein_array_, Number_Of_Genes_);
+            this->SetNewRNA_stem_symmetric(mRNA_array_, Number_Of_Genes_);
     if (this->Protein_array_[0]> KinParam_[8]) { this->internal_state_[Type] =1.;}
     else{
         this->internal_state_[Type] =0.;}
@@ -489,7 +493,7 @@ Cell* Cancer::Divide(void) {
  }
  }
 
-void Cancer::SetNewProteinLevel1(const double K,const double MotherProteins[],const int sz)const {
+/*void Cancer::SetNewProteinLevel1(const double K,const double MotherProteins[],const int sz)const {
     for (u_int32_t j = 0; j < sz; j++) {
       Protein_array_[j] =  K * MotherProteins[j]/2.;
     }
@@ -535,24 +539,18 @@ void Cancer::SetNewRNA_differentiated(const  double K,const double MotherRNA[],c
     for (u_int32_t j = 0; j < sz; j++) {
       mRNA_array_[j] = 0.2 * MotherRNA[j]/2.;
     }
-}
+}*/
 
-void Cancer::SetNewProtein_stem_symmetric(const double K,const double MotherProteins[],const int sz)const {                                                                                                                                         
+void Cancer::SetNewProtein_stem_symmetric(const double MotherProteins[],const int sz)const {                                                                                                                                         
     for (u_int32_t j = 0; j < sz; j++) {
       Protein_array_[j] =  MotherProteins[j]/2.;
     }
 }
 
-void Cancer::SetNewRNA_stem_symmetric(const double K,const double MotherRNA[],const int sz)const {
+void Cancer::SetNewRNA_stem_symmetric(const double MotherRNA[],const int sz)const {
     for (u_int32_t j = 0; j < sz; j++) {
      mRNA_array_[j] =  MotherRNA[j]/2.;
     }
-}
-
-
-
-void Cancer::Update_count_division_mother( double Mother_division ) {
-Mother_division += 1.;
 }
 
 void Cancer::Update_count_division( double Mother_division,const int s )const {
@@ -563,7 +561,7 @@ void Cancer::Update_count_division( double Mother_division,const int s )const {
 
 
 //############sigma#######
-void Cancer::Get_Sigma( double *Sigma_i ,double * P, bool AcceptNegative, double S_S, const double x ) {
+void Cancer::Get_Sigma( double *Sigma_i ,double * P, bool AcceptNegative, double S_S, const double x, double D_D, const double y ) {
 
 double Parr[Number_Of_Genes_];
  memcpy(Parr, P, Number_Of_Genes_ * sizeof (*P));
@@ -576,7 +574,11 @@ double Parr[Number_Of_Genes_];
  // Basal activity for other genes                                                                                                                                                               
 if ( i == 0){
   initval_i[i] = -3.0;
-  if (S_S > 0.) {initval_i[i] += S_S*x;}
+  if (S_S > 0.) {initval_i[i] += S_S * x;}
+}
+else if ( i == 1){
+  initval_i[i] = -5.0;
+  if (D_D > 0.) {initval_i[i] += D_D * y;}
 }
 else {initval_i[i] = -5.0;}
  for (u_int32_t j = 0; j < Number_Of_Genes_; j++) {
@@ -699,47 +701,6 @@ string filename ="kineticsparam.txt";
     return 0;
 }
 
-double Cancer::get_InitPos() {
-std::vector<double>  initialPos;
-
-ifstream indataP; // indata
-
-string filename = "initpop.txt";
-
- indataP.open(filename); // opens the file
-  if (!indataP) { // file couldn't be opened
-        std::cerr << "Error: file Pos_0.txt could not be opened" << std::endl;
-  initialP_ = new double[6*15];
- }
-    std::string line;
-    double val;
-    int c = 0;
-    int l = 0;
-
-while (std::getline(indataP, line)) {
-        std::istringstream Vss(line);
-        l = 0;
-        while ( l < 6) {
-            if ((!(Vss >> val))) {
-                std::cerr << "Error: Value missing in position/character" << std::endl;
-                break;
-            }// error
-            else {
-        initialPos.push_back(val);      
-         l = l + 1;
-            }
-        }
-        c = c + 1;
-        }
-
-    initialP_ =new double[6*15];
-    indataP.close();
-    
-  return 0.0;
-}
-
-
- 
 double Cancer::get_output(InterCellSignal signal) const {
   switch (signal) {
  case InterCellSignal::CANCER_TYPE:
@@ -748,6 +709,8 @@ double Cancer::get_output(InterCellSignal signal) const {
             return outer_volume();
   case InterCellSignal::STEM_CONTACT:
             return internal_state_[S_S];
+   case InterCellSignal::SYP_CONTACT:
+            return internal_state_[D_D];
   case InterCellSignal::CANCER_S:
             return Protein_array_[0];
       case InterCellSignal::CANCER_D1:

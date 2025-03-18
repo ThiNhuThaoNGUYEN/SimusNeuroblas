@@ -304,7 +304,6 @@ void Cell::AddMechForce(const Cell* other) {
   // if (cell_type() == NICHE) return; // don't move niche cells
   if ( move_behaviour_->type() == MoveBehaviour::Type::IMMOBILE ) 
   {
-    // std::cout << "niche cell " << id() << endl;
     return;
   }
   
@@ -349,27 +348,23 @@ void Cell::AddChemCom(const Cell* other) {
 
   if (h > 0) { // if cells are touching one another
 
-    double contact_area = Simulation::usecontactarea() ? M_PI * (mean_radius * h - h*h / 4) : 1.0;
+double contact_area = Simulation::usecontactarea() ? M_PI * (mean_radius * h - h*h / 4) : 1.0;
 
-     if (other->cell_type() == STEM) {
- // This signal is for stem contact
-      intrinsic_inputs_.Add(InterCellSignal::STEM_CONTACT, 1.);
-    }
-
-else{
     for ( unsigned long i = 0; i < nbr_signals; ++i) {
       intrinsic_inputs_.Add(static_cast<InterCellSignal>(i),
                             contact_area * other->get_output(static_cast<InterCellSignal>(i)));
     }
-}
+
     if (other->cell_type() == NICHE) {
-//std::cout<<"isNICHE"<<std::endl;
+
       // This signal is either on or off
       intrinsic_inputs_.Add(InterCellSignal::NICHE, 1.);
     }
-     
-  }
+
 }
+}
+
+
 
 void Cell::ResetInSignals() {
   intrinsic_inputs_.Reset();

@@ -22,7 +22,7 @@ class Cancer : public Cell {
 
  public :
  typedef enum {
-      Type, S_S 
+      Type, S_S, D_D 
     } StateVariable;
 
 
@@ -83,11 +83,11 @@ class Cancer : public Cell {
   Coordinates<double> MotileDisplacement(const double& dt) override;
   void Cell_update(const double& dt);  
   void UpdateType(double Mother_type); 
-  void Get_Sigma( double * sigma, double * P, bool AcceptNegative, double S_S, const double x);
+  void Get_Sigma( double * sigma, double * P, bool AcceptNegative, double S_S, const double x, double D_D, const double y);
   void Intracellular_ExactEvol(double DeltaT, double * P, double * M, double * S1);
   void ODE_update(const double& dt);
   void UpdatePhylogeny(std::vector<int> phy_id, std::vector<double> phy_t, int sz);
-  void SetNewProteinLevel1(const double Ki, const double MotherProteins[],const  int sz)const ;
+  /*void SetNewProteinLevel1(const double Ki, const double MotherProteins[],const  int sz)const ;
   void SetNewProteinLevel2(const double Ki,const double MotherProteins[],const int sz)const ;
   void SetNewRNALevel1(const double Km, const double MotherRNA[],const  int sz)const ;
   void SetNewRNALevel2(const double Km,const double MotherRNA[],const int sz)const ;
@@ -95,9 +95,12 @@ class Cancer : public Cell {
   void SetNewProtein_differentiated(const double Ki,const double MotherProteins[],const int sz)const ;
   void SetNewRNA_stem(const double Km, const double MotherRNA[],const  int sz)const ;
   void SetNewRNA_differentiated(const double Km,const double MotherRNA[],const int sz)const ;
-  void SetNewRNA_stem_symmetric(const double Km, const double MotherRNA[],const  int sz)const ;
-  void SetNewProtein_stem_symmetric(const double Ki, const double MotherProteins[],const  int sz)const ;
-
+  */
+  void SetNewRNA_stem_symmetric(const double MotherRNA[],const  int sz)const ;
+  void SetNewProtein_stem_symmetric(const double MotherProteins[],const  int sz)const ;
+  double count_Neib_Stem();
+  double count_Neib_Syp();
+  //void count_Neib_Syp(double count); 
   void Update_count_division(double Mother_division, const int s )const;
   void Update_count_division_mother(double Mother_division);
      
@@ -115,10 +118,9 @@ class Cancer : public Cell {
  protected:
   // <TODO> Add your formalism-specific attributes here </TODO>
 
-  static constexpr uint32_t odesystemsize_ = 2;
+  static constexpr uint32_t odesystemsize_ = 3;
   double* internal_state_;
   double* initialP_;
-  //int Number_cells = 0;
   
   double* mRNA_array_;
   double* Protein_array_;
@@ -129,7 +131,7 @@ class Cancer : public Cell {
   double* KinParam_;
   double* Remember_division_ ;
   int Number_Of_Genes_;
-  int Number_Of_Parameters_ = 14;
+  int Number_Of_Parameters_ = 15;
   bool isMitotic_ = false; // distinguishes cells about to divide
   double Time_NextJump_ = 0.;
   int ithGene_;
