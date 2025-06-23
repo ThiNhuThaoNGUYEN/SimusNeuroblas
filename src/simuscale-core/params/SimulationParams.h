@@ -81,12 +81,16 @@ class SimulationParams {
   const NicheParams& niche_params() const { return niche_params_; };
   const CellParams& cell_params() const { return cell_params_; };
   const WorldSizeParams& worldsize_params() const { return worldsize_params_; };
-  bool usecontactarea() const { return usecontactarea_>0.; };
+  bool usecontactarea() const { return usecontactarea_; };
   bool output_orientation() const { return output_orientation_; };
-
+  double max_force() const { return max_force_; };
+  double LJ_epsilon() const { return LJ_epsilon_; };
 
   void setNicheParams(const char* formalism_str, double internal_radius);
   const std::list<InterCellSignal>& using_signals() const { return using_signals_; };
+  const std::list<InterCellSignal>& using_diffusive_signals() const { return using_diffusive_signals_; };
+  const std::vector<float>& diffusive_delta() const { return diffusive_delta_; }
+  const std::vector<float>& diffusive_epsilon() const { return diffusive_epsilon_; }
   const std::vector<std::string>& celltype_names() const { return celltype_names_; };
 
   // ==========================================================================
@@ -117,6 +121,7 @@ class SimulationParams {
   /** default time span */
   double maxtime_ = 200.0;
   int32_t maxpop_ = 200;
+
   /** default macroscopic time step */
   double dt_ = 0.2; // We aim at a code working with DT=0.5 or DT=1
   double backup_dt_ = 10.0; // Frequency of backups
@@ -127,10 +132,21 @@ class SimulationParams {
   bool usecontactarea_ = true;
   bool output_orientation_ = false;
 
+  /** Max mechanical force between cells */
+  double max_force_ = 0.5; 
+
+  /** Lennard-Jones epsilon scale constant */
+  double LJ_epsilon_ = 0.002;
+
   /** Intercellular signals used in simulation */
   std::list<InterCellSignal> using_signals_;
   /** Names of cell types */
   std::vector<std::string> celltype_names_;
+
+  /** Intercellular signals used as diffusive (long-range) signals */
+  std::list<InterCellSignal> using_diffusive_signals_;
+  std::vector<float> diffusive_delta_;
+  std::vector<float> diffusive_epsilon_;
 
  public:
   /** Map cell formalism param file keywords to classIds */

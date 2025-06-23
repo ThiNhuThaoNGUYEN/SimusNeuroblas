@@ -42,6 +42,8 @@ using std::cerr;
 using std::endl;
 
 #define PRINT_CELLTYPE
+#define PRINT_LIVINGSTATUS
+#define PRINT_DIFFUSIVESIGNALS
 
 //##############################################################################
 //                                                                             #
@@ -190,7 +192,7 @@ void OutputManager::PrepareFileForResume(const string& input_file_path,
     }
 
     // ===== Copy file header =====
-    while (!feof(input_file) && (line[0] == '#' || line[0] == '!')) {
+    while (!feof(input_file) && (line[0] == '#' || line[0] == '!' || line[0] == '$')) {
         fputs(line, output_file);
         if (fgets(line, buf_size, input_file) == NULL) {
             cerr << "Error reading header line of file " + input_file_path << endl;
@@ -286,9 +288,17 @@ void OutputManager::PrintTrajectoryHeader(void) {
 #ifdef PRINT_CELLTYPE
     fprintf(outputs_[TRAJECTORY], "# %" PRId32 " : cell type\n",column_nbr++);
 #endif
+#ifdef PRINT_LIVINGSTATUS
+    fprintf(outputs_[TRAJECTORY], "# %" PRId32 " : living status\n",column_nbr++);
+#endif
   for ( auto signal : Simulation::using_signals() ) {
     fprintf(outputs_[TRAJECTORY], "$ %" PRId32 " = %s\n", column_nbr++, InterCellSignal_Names.at(signal).c_str() );
   }
+#ifdef PRINT_DIFFUSIVESIGNALS
+  for ( auto signal : Simulation::fgt()->using_diffusive_signals() ) {
+    fprintf(outputs_[TRAJECTORY], "$ %" PRId32 " = %s_D_ diffusive\n", column_nbr++, InterCellSignal_Names.at(signal).c_str() );
+  }
+#endif
 }
 
 void OutputManager::PrintTrajectory(void) {
@@ -318,9 +328,18 @@ void OutputManager::PrintTrajectory(void) {
     fprintf(outputs_[TRAJECTORY],
             "%s ", CellType_Names.at(cell->cell_type()).c_str());
 #endif
+#ifdef PRINT_LIVINGSTATUS
+    fprintf(outputs_[TRAJECTORY],
+            "%c ", cell->isDying() ? 'D' : 'A');
+#endif
     for ( auto signal : Simulation::using_signals() ) {
       fprintf(outputs_[TRAJECTORY], FL_FMT " ", cell->get_output(signal) );
     }
+#ifdef PRINT_DIFFUSIVESIGNALS
+    for ( auto signal : Simulation::fgt()->using_diffusive_signals() ) {
+      fprintf(outputs_[TRAJECTORY], FL_FMT " ", cell->gaussian_field_weight(signal) );
+    }
+#endif
     fprintf(outputs_[TRAJECTORY], "\n");
   }
 }
@@ -344,6 +363,16 @@ void OutputManager::PrintNormalization(void) {
             Simulation::min_signals().at(i));
     i++;
   }
+#ifdef PRINT_DIFFUSIVESIGNALS
+  for ( auto signal : Simulation::fgt()->using_diffusive_signals() ) {
+    fprintf(normalization_file_,
+            "%s_D_ " FL_FMT " " FL_FMT "\n",
+            InterCellSignal_Names.at(signal).c_str(),
+            Simulation::max_signals().at(i),
+            Simulation::min_signals().at(i));
+    i++;
+  }
+#endif
 
     fclose(normalization_file_);
 }

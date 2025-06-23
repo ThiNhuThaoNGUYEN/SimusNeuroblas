@@ -42,6 +42,9 @@
 class InterCellSignals {
 
  public :
+
+  using real_type_ = float;
+
   // ==========================================================================
   //                               Constructors
   // ==========================================================================
@@ -68,6 +71,7 @@ class InterCellSignals {
   // ==========================================================================
   void Reset();
   void Add(InterCellSignal signal, double value);
+  void AddGaussianField(InterCellSignal signal, std::vector<real_type_>& value);
   void Load(gzFile backup_file);
   void Save(gzFile backup_file) const;
 
@@ -79,6 +83,8 @@ class InterCellSignals {
     return signals_;
   }
 
+  std::vector<real_type_> gaussian_field(InterCellSignal inSignal) const;
+  const std::vector<std::vector<real_type_>>& gaussian_fields() const { return gaussian_fields_; };
 
  protected :
   // ==========================================================================
@@ -90,5 +96,8 @@ class InterCellSignals {
   //                               Attributes
   // ==========================================================================
   std::vector<double> signals_ = std::vector<double>(nbr_signals);
+ 
+  std::vector<std::vector<real_type_>> gaussian_fields_ = std::vector<std::vector<real_type_>>(nbr_signals);
+
 };
 #endif //SIMUSCALE_INTERCELLSIGNALS_H__

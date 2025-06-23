@@ -73,8 +73,6 @@ Coordinates<double> WorldSize::RandomPos(double radius, double floor_z) {
           (size_.x / 3.0 - 2 * radius) * (Alea::random());
   pos.y = margin_.y + radius + size_.y / 3.0 +
           (size_.y / 3.0 - 2 * radius) * (Alea::random());
-  pos.z = margin_.z + radius +  size_.z / 3.0 +
-          (size_.z / 3.0 - 2 * radius) * (Alea::random())-floor_z;
-
+  pos.z = margin_.z + radius + floor_z;
   return pos;
 }

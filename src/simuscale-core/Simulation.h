@@ -41,6 +41,7 @@
 #include "Cell.h"
 #include "OutputManager.h"
 #include "CellTree.h"
+#include "fgt/FastGaussTransform3D.h"
 
 // =================================================================
 //                          Class declarations
@@ -49,6 +50,7 @@
 
 using std::string;
 
+class FastGaussTransform3D; /* needed because circular dependencies */
 
 /*!
   \brief TODO.
@@ -56,6 +58,14 @@ using std::string;
 class Simulation
 {
  public :
+  // ==========================================================================
+  //                               Types
+  // ==========================================================================
+
+  using real_type_ = float;
+  using uint_type_ = uint32_t;
+  using point_type_ = array<real_type_, 3>;
+
   // =================================================================
   //                        Singleton management
   // =================================================================
@@ -80,6 +90,7 @@ class Simulation
   static void Load(const string& input_dir,
                    int32_t timestep,
                    const string& output_dir);
+  static void Dump(const string& input_dir, double backup_time, int dump);
 
 
   // =================================================================
@@ -90,7 +101,6 @@ class Simulation
   static int32_t timestep() {return instance_.timestep_;};
   static const OutputManager& output_manager() {
     return instance_.output_manager_;};
-  static double maxtime() {return instance_.max_timestep_;}; 
   // static double maxtime() {return instance_.maxtime_;};
   static const Population& pop() {return *(instance_.pop_);};
   static const std::list<InterCellSignal>& using_signals() { return instance_.using_signals_; };
@@ -99,6 +109,7 @@ class Simulation
   static bool usecontactarea() { return instance_.usecontactarea_; };
   static bool output_orientation() { return instance_.output_orientation_; };
   static const CellTree& tree() { return *(instance_.tree_); }; 
+  static const FastGaussTransform3D* fgt() { return instance_.fgt_; }
 
 
 
@@ -113,6 +124,7 @@ class Simulation
   void ComputeNeighbourhood();
   void CheckNeighbourhood();
   void ComputeInteractions();
+  void ComputeGaussianFields();
   void ApplyUpdate();
   void UpdateMinMaxSignals(Cell* cell);
 
@@ -120,7 +132,7 @@ class Simulation
   void DoLoad(const string& input_dir,
               double time,
               const string& output_dir);
-
+  void DoDump(const string& input_dir, double backup_time, int dump);
 
   // =================================================================
   //                              Attributes
@@ -129,10 +141,10 @@ class Simulation
   double  time_;
   /** Current time-step */
   int32_t timestep_;
-  /** Number of timesteps to be simulated */
-  int32_t max_timestep_;
   /** Number of Maxpop to be simulated */
   int32_t max_pop_;
+  /** Number of timesteps to be simulated */
+  int32_t max_timestep_;
   /** Delta time between 2 time steps */
   double dt_;
   /** Number of timesteps between 2 backups */
@@ -140,6 +152,9 @@ class Simulation
 
   /** The cell population */
   Population* pop_;
+
+  /** Fast Gaussian Transform */
+  FastGaussTransform3D* fgt_;
 
   /** Intercellular signals to monitor */
   std::list<InterCellSignal> using_signals_;

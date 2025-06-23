@@ -22,7 +22,7 @@ class Cancer : public Cell {
 
  public :
  typedef enum {
-      Type, S_S, D_D 
+     Type, S_S, D_D 
     } StateVariable;
 
 
@@ -69,17 +69,20 @@ class Cancer : public Cell {
   double get_output(InterCellSignal signal) const override;
   double get_GeneParams(void);
   double get_InitPos(void);
-  //  bool isCycling() const override;
   bool isDividing() const override;
-  bool isDying() const override;
+  
+
+// Fast Gaussian Transform -----------------------------------------
+  double gaussian_field_weight(InterCellSignal signal) override;
+  const Coordinates<double>& gaussian_field_source(InterCellSignal signal) override; 
+  std::vector<Coordinates<double>> gaussian_field_targets(InterCellSignal signal) override;
+  // END Fast Gaussian Transform -------------------------------------
+
 
  protected :
   // ==========================================================================
   //                            Protected Methods
   // ==========================================================================
-  //void UpdateCyclingStatus() override;
-  //  bool StopCycling() override;
-  //bool StartCycling() override;
   Coordinates<double> MotileDisplacement(const double& dt) override;
   void Cell_update(const double& dt);  
   void UpdateType(double Mother_type); 
@@ -87,20 +90,10 @@ class Cancer : public Cell {
   void Intracellular_ExactEvol(double DeltaT, double * P, double * M, double * S1);
   void ODE_update(const double& dt);
   void UpdatePhylogeny(std::vector<int> phy_id, std::vector<double> phy_t, int sz);
-  /*void SetNewProteinLevel1(const double Ki, const double MotherProteins[],const  int sz)const ;
-  void SetNewProteinLevel2(const double Ki,const double MotherProteins[],const int sz)const ;
-  void SetNewRNALevel1(const double Km, const double MotherRNA[],const  int sz)const ;
-  void SetNewRNALevel2(const double Km,const double MotherRNA[],const int sz)const ;
-  void SetNewProtein_stem(const double Ki, const double MotherProteins[],const  int sz)const ;
-  void SetNewProtein_differentiated(const double Ki,const double MotherProteins[],const int sz)const ;
-  void SetNewRNA_stem(const double Km, const double MotherRNA[],const  int sz)const ;
-  void SetNewRNA_differentiated(const double Km,const double MotherRNA[],const int sz)const ;
-  */
   void SetNewRNA_stem_symmetric(const double MotherRNA[],const  int sz)const ;
   void SetNewProtein_stem_symmetric(const double MotherProteins[],const  int sz)const ;
   double count_Neib_Stem();
   double count_Neib_Syp();
-  //void count_Neib_Syp(double count); 
   void Update_count_division(double Mother_division, const int s )const;
   void Update_count_division_mother(double Mother_division);
      
@@ -121,7 +114,8 @@ class Cancer : public Cell {
   static constexpr uint32_t odesystemsize_ = 3;
   double* internal_state_;
   double* initialP_;
-  
+ 
+  double S2_; ///signal stem diffusive 
   double* mRNA_array_;
   double* Protein_array_;
   int PhantomJumpCounts_= 0;
@@ -132,7 +126,6 @@ class Cancer : public Cell {
   double* Remember_division_ ;
   int Number_Of_Genes_;
   int Number_Of_Parameters_ = 15;
-  bool isMitotic_ = false; // distinguishes cells about to divide
   double Time_NextJump_ = 0.;
   int ithGene_;
   std::vector<double>  phylogeny_t_;

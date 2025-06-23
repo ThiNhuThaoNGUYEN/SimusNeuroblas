@@ -58,7 +58,7 @@ void Motile::Move(Cell* cell, const double& dt) const {
                            dt * cell->mechanical_force_.y,
                            dt * cell->mechanical_force_.z };
 
-  dpos += cell->MotileDisplacement(dt);
+  dpos += cell->motility(dt);
 
   // Apply displacement
   cell->Move(dpos);

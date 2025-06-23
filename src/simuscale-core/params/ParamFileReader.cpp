@@ -88,7 +88,6 @@ void ParamFileReader::interpret_line(f_line* line) {
   else if (strcmp(line->words[0], "MAXTIME") == 0) {
     simParams.maxtime_ = atof(line->words[1]);
   }
-  
   else if (strcmp(line->words[0], "MAXPOP") == 0) {
     simParams.maxpop_ = atof(line->words[1]);
   }
@@ -181,6 +180,17 @@ void ParamFileReader::interpret_line(f_line* line) {
   else if (strcmp(line->words[0], "SIGNAL") == 0) {
     try {
       simParams.using_signals_.push_back (simParams.StrToInterCellSignal(line->words[1]));
+      if (line->nb_words >= 4) {
+        if ( strcmp(line->words[2], "DIFFUSIVE") == 0) {
+          simParams.using_diffusive_signals_.push_back (simParams.StrToInterCellSignal(line->words[1]));
+          simParams.diffusive_delta_.push_back (atof(line->words[3]));
+        }
+      }
+      if (line->nb_words >= 6) {
+        if ( strcmp(line->words[4], "EPSILON") == 0) {
+          simParams.diffusive_epsilon_.push_back (atof(line->words[5]));
+        }
+      }
     }
     catch (const string& error) {
       printf("ERROR in param file \"%s\" on line %" PRId32
@@ -251,6 +261,32 @@ void ParamFileReader::interpret_line(f_line* line) {
   else if (strcmp(line->words[0], "WRITEORIENTATION") == 0) {
     try {
       simParams.output_orientation_ = static_cast<bool>(atol(line->words[1]));
+    }
+    catch (const string& error) {
+      printf("ERROR in param file \"%s\" on line %" PRId32
+                 ": %s.\n",
+             _param_file_name.c_str(), _cur_line, error.c_str());
+      exit(EXIT_FAILURE);
+
+    }
+  }
+
+  else if (strcmp(line->words[0], "LJMAXFORCE") == 0) {
+    try {
+      simParams.max_force_ = atof(line->words[1]);
+    }
+    catch (const string& error) {
+      printf("ERROR in param file \"%s\" on line %" PRId32
+                 ": %s.\n",
+             _param_file_name.c_str(), _cur_line, error.c_str());
+      exit(EXIT_FAILURE);
+
+    }
+  }
+
+  else if (strcmp(line->words[0], "LJEPSILON") == 0) {
+    try {
+      simParams.LJ_epsilon_ = atof(line->words[1]);
     }
     catch (const string& error) {
       printf("ERROR in param file \"%s\" on line %" PRId32

@@ -35,6 +35,7 @@
 #include <cstdlib>
 #include <cfloat>
 #include <vector>
+#include <zlib.h>
 
 #include <CellType.h>
 
@@ -50,7 +51,7 @@ class TreeNode
   //                             Constructors
   // =================================================================
   TreeNode() = default;
-  TreeNode(uint32_t id, float birth, float tip, CellType cell_type);
+  TreeNode(uint32_t id, float birth, float tip, CellType cell_type, const char *cell_formalism);
 
 
   // =================================================================
@@ -65,6 +66,9 @@ class TreeNode
   void AddChild(TreeNode* child) { children_.push_back(child);};
   void set_time_of_tip(float time) { tip_ = time; };
 
+  void Save(gzFile backup_file) const;
+  void Load(gzFile backup_file);
+
   // =================================================================
   //                              Accessors
   // =================================================================
@@ -73,6 +77,7 @@ class TreeNode
   float birth() const {return birth_;};
   float tip() const {return tip_;};
   CellType cell_type() const {return cell_type_;};
+  const char *cell_formalism() const {return cell_formalism_;}
   uint32_t nbr_children() {return children_.size();};
 
   const std::vector<TreeNode*>& children() const {return children_;};
@@ -100,8 +105,11 @@ class TreeNode
   /** tip: time of tip of the cell: either death, end of simulation or 0 if node is root */
   float tip_; 
 
-  /** cell_type_: cell type if the cell at birth */
+  /** cell_type_: cell type of the cell at birth */
   CellType cell_type_;
+
+  /** cell_formalism_: cell formalism used */
+  const char *cell_formalism_;
 
   std::vector<TreeNode*> children_;
 
@@ -131,8 +139,11 @@ class CellTree
   // =================================================================
   void PrintNewick(FILE *file) const;
   void PrintTabularTree(FILE *file) const;
-  TreeNode* AddTreeNode(TreeNode* mother, float time, float tip, uint32_t id, CellType cell_type);
+  TreeNode* AddTreeNode(TreeNode* mother, float time, float tip, uint32_t id, CellType cell_type, const char *cell_formalism);
   TreeNode* GetNodeFromId(uint32_t id);
+
+  void Save(gzFile backup_file) const;
+  void Load(gzFile backup_file);
 
   // =================================================================
   //                              Accessors

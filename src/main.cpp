@@ -51,51 +51,47 @@ using std::endl;
 void interpret_cmd_line_options(int argc, char* argv[],
                                 string& input_dir,
                                 string& output_dir,
-                                double& resume_time);
+                                double& backup_time,
+                                int& dump);
 void print_help(char* prog_path);
 void print_version();
 
 
 
 int main(int argc, char* argv[]) {
-  cout << "main"<< endl;
+  // cout << "main"<< endl;
   string input_dir;
   string output_dir;
-  double resume_time = -1;
- 
-  double time_spent = 0.0;
-  clock_t begin = clock();
+  double backup_time = -1;
+  int dump = 0; /* 0: no dump, 1: dump json, 2: dump lineage tree, 3: dump json and lineage tree */
 
-
-  interpret_cmd_line_options(argc, argv, input_dir, output_dir, resume_time);
+  interpret_cmd_line_options(argc, argv, input_dir, output_dir, backup_time, dump);
 
   // Create the simulation
-  if (resume_time == -1) {
+  if (backup_time == -1) {
     ParamFileReader paramFileReader(input_dir + "/param.in");
     paramFileReader.load();
-    cout << "loaded parameters" << endl;
+    cout << "Parameters loaded" << endl;
 
     // Simulation setup
     Simulation::Setup(paramFileReader.get_simParams(), output_dir);
   }
-  else {
-    printf("Resuming simulation from dir \"%s\" at time %f\n", input_dir.c_str(), resume_time);
-    Simulation::Load(input_dir, resume_time, output_dir);
+  else if (dump == 0) {
+    printf("Resuming simulation from dir \"%s\" at time %f\n", input_dir.c_str(), backup_time);
+    Simulation::Load(input_dir, backup_time, output_dir);
+  }
+  else { // dump == true
+    // printf("Dumping simulation from dir \"%s\" at time %f\n", input_dir.c_str(), backup_time);
+    Simulation::Dump(input_dir, backup_time, dump);
+    return 0; // do not run the simulation
   }
 
   // Run simulation
+  cout << "Running simulation" << endl;
   Simulation::Run();
 
   cout << endl;
   cout << "End of simulation." << endl;
-
-  clock_t end = clock();
-  
-    // calculate elapsed time by finding difference (end - begin) and
-    // dividing the difference by CLOCKS_PER_SEC to convert to seconds
-    time_spent += (double)(end - begin) / CLOCKS_PER_SEC;
-
-    printf("The elapsed time is %f seconds \n", time_spent);
 
   return 0;
 }
@@ -104,20 +100,24 @@ int main(int argc, char* argv[]) {
 void interpret_cmd_line_options(int argc, char* argv[],
                                 string& input_dir,
                                 string& output_dir,
-                                double& resume_time) {
+                                double& backup_time,
+                                int& dump) {
   // 1) Initialize command-line option variables with default values
   input_dir = "";
   output_dir = "";
 
 
   // 2) Define allowed options
-  const char* options_list = "hVi:o:r:";
+  const char* options_list = "hVi:o:r:j:l:d:";
   static struct option long_options_list[] = {
       {"help",     no_argument,        NULL, 'h'},
       {"version",  no_argument,        NULL, 'V'},
       {"in",       required_argument,  NULL, 'i'},
       {"out",      required_argument,  NULL, 'o'},
       {"resume",   required_argument,  NULL, 'r'},
+      {"json",     required_argument,  NULL, 'j'},
+      {"lineage",  required_argument,  NULL, 'l'},
+      {"dump",     required_argument,  NULL, 'd'},
       {0, 0, 0, 0}
   };
 
@@ -148,7 +148,22 @@ void interpret_cmd_line_options(int argc, char* argv[],
         break;
       }
       case 'r' : {
-        resume_time = atof(optarg);
+        backup_time = atof(optarg);
+        break;
+      }
+      case 'j' : {
+        backup_time = atof(optarg);
+        dump = 1;
+        break;
+      }
+      case 'l' : {
+        backup_time = atof(optarg);
+        dump = 2;
+        break;
+      }
+      case 'd' : {
+        backup_time = atof(optarg);
+        dump = 3;
         break;
       }
       default : {
@@ -173,16 +188,20 @@ void print_help(char* prog_path) {
   if ((prog_name = strrchr(prog_path, '/'))) prog_name++;
   else prog_name = prog_path;
 
-  cout << "SiMuScale - Multi-scale simulation framework\n\n"
+  cout << "Simuscale - Multiscale simulation framework\n\n"
       << "Usage: " << prog_name << " -h or --help\n"
       << "   or: " << prog_name << " -V or --version\n"
-      << "   or: " << prog_name << " [-i INDIR] [-o OUTDIR] [-r TIME]\n\n"
+      << "   or: " << prog_name << " [-i INDIR] [-o OUTDIR] [-r TIME]\n"
+      << "   or: " << prog_name << " [-i INDIR] [-d TIME]\n\n"
       << "Options:\n"
       << "  -h, --help\n\tprint this help, then exit\n"
       << "  -V, --version\n\tprint version number, then exit\n"
       << "  -i, --in INDIR\n\tspecify input directory\n"
       << "  -o, --out OUTDIR\n\tspecify output directory\n"
-      << "  -r, --resume TIME\n\tresume simulation at a given time\n";
+      << "  -r, --resume TIME\n\tresume simulation at a given time from backup\n"
+      << "  -j, --json TIME\n\tprint simulation state time TIME from backup\n"
+      << "  -l, --lineage TIME\n\tprint lineage tree at time TIME from backup\n"
+      << "  -d, --dump TIME\n\tprint simulation state (json + lineage tree) at time TIME from backup\n";
 }
 
 void print_version() {

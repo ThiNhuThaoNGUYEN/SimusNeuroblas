@@ -67,6 +67,7 @@ Simulation Simulation::instance_;
 Simulation::Simulation() {
   grid_ = new Grid();
   pop_ = new Population();
+  fgt_ = new FastGaussTransform3D();
 
   time_ = 0.0;
   timestep_ = 0;
@@ -80,6 +81,7 @@ Simulation::Simulation() {
 Simulation::~Simulation() {
   delete pop_;
   delete grid_;
+  delete fgt_;
 }
 
 
@@ -89,6 +91,8 @@ Simulation::~Simulation() {
 void Simulation::Setup(const SimulationParams& simParams,
                        const string& output_dir) {
   instance_.DoSetup(simParams, output_dir);
+
+
 }
 
 void Simulation::Run() {
@@ -105,6 +109,9 @@ void Simulation::Load(const string& input_dir,
   instance_.DoLoad(input_dir, timestep, output_dir);
 }
 
+void Simulation::Dump(const string& input_dir, double backup_time, int dump) {
+  instance_.DoDump(input_dir, backup_time, dump);
+}
 
 // =================================================================
 //                           Protected Methods
@@ -118,7 +125,7 @@ void Simulation::DoSetup(const SimulationParams& simParams,
       static_cast<int32_t>(round(simParams.backup_dt() / simParams.dt()));
   max_timestep_ =
       static_cast<int32_t>(round(simParams.maxtime() / simParams.dt()));
-  max_pop_ = simParams.maxpop() ; 
+  max_pop_ = simParams.maxpop() ;
 
   // Seed PRNG
   if (simParams.autoseed())
@@ -130,6 +137,8 @@ void Simulation::DoSetup(const SimulationParams& simParams,
   // Cell parameters
   Cell::set_volume_max_min_ratio(simParams.cell_params().volume_max_min_ratio());
   Cell::set_radii_ratio(simParams.cell_params().radii_ratio());
+  Cell::set_max_force(simParams.max_force());
+  Cell::set_LJ_epsilon(simParams.LJ_epsilon());
 
   // WorldSize parameters
   WorldSize::set_worldsize(simParams.worldsize_params().size());
@@ -152,35 +161,42 @@ void Simulation::DoSetup(const SimulationParams& simParams,
 
   // Add cells in the tree at root
   for (Cell* cell : pop_->cell_list()) {
-    tree_->AddTreeNode(tree_->root(),time_,max_timestep_*dt_,cell->id(),cell->cell_type()); 
+    tree_->AddTreeNode(tree_->root(),time_,max_timestep_*dt_,cell->id(),cell->cell_type(),cell->cell_formalism()); 
   }
 
 
-  // Intercellular signals to momitor
+  // Intercellular signals to monitor
   using_signals_ = simParams.using_signals();
+
+  // FGT Setup
+  fgt_->Setup(simParams);
 
   usecontactarea_ = simParams.usecontactarea(); 
   output_orientation_ = simParams.output_orientation(); 
 
-  max_signals_.resize(using_signals_.size());
-  min_signals_.resize(using_signals_.size());
+  max_signals_.resize(using_signals_.size() + fgt_->using_diffusive_signals().size());
+  min_signals_.resize(using_signals_.size() + fgt_->using_diffusive_signals().size());
   std::fill(max_signals_.begin(),max_signals_.end(),-DBL_MAX);
   std::fill(min_signals_.begin(),min_signals_.end(), DBL_MAX);
 
+  // Output Manager setup
   output_manager_.Setup(output_dir);
   output_manager_.PrintTimeStepOutputs();
+
 }
 
 void Simulation::DoRun() {
   while(timestep_ < max_timestep_) {
     Update();
     if (Simulation::pop().Size() >= max_pop_) break;
+
   }
   Finalize();
 }
 
 void Simulation::Update() {
   ComputeInteractions();
+  ComputeGaussianFields();
   ApplyUpdate();
   
   if (timestep_ % backup_dtimestep_ == 0) {
@@ -201,7 +217,7 @@ void Simulation::Finalize() {
 void Simulation::DoSave() {
   // Open backup file
   char backup_file_path[255];
-  sprintf(backup_file_path,
+  snprintf(backup_file_path, 255,
           "%s/backup_%06" PRId32,
           output_manager_.output_dir().c_str(),
           static_cast<int32_t>(round(time_)));
@@ -223,8 +239,23 @@ void Simulation::DoSave() {
   gzwrite(backup_file, &max_timestep_, sizeof(backup_file));
   gzwrite(backup_file, &dt_, sizeof(dt_));
   gzwrite(backup_file, &backup_dtimestep_, sizeof(backup_dtimestep_));
+  gzwrite(backup_file, &usecontactarea_, sizeof(usecontactarea_));
+  gzwrite(backup_file, &output_orientation_, sizeof(output_orientation_));
+  uint16_t size = using_signals().size();
+  gzwrite(backup_file,&size,sizeof(size));
+  for ( auto signal : using_signals() ) {
+    uint16_t int_sig = static_cast<uint16_t>(signal);
+    gzwrite(backup_file, &int_sig, sizeof(int_sig));
+  }
+  size = max_signals_.size();
+  gzwrite(backup_file,&size,sizeof(size));
+  gzwrite(backup_file,&max_signals_[0],size*sizeof(double));
+  gzwrite(backup_file,&min_signals_[0],size*sizeof(double));
   pop_->Save(backup_file);
   grid_->Save(backup_file);
+
+  fgt_->Save(backup_file);
+  tree_->Save(backup_file);
 
   // Close backup file
   gzclose(backup_file);
@@ -235,7 +266,7 @@ void Simulation::DoLoad(const string& input_dir,
                         const string& output_dir) {
   // Open backup file
   char backup_file_path[255];
-  sprintf(backup_file_path,
+  snprintf(backup_file_path, 255,
           "%s/backup_%06" PRId32,
           input_dir.c_str(),
           static_cast<int32_t>(round(time)));
@@ -257,9 +288,31 @@ void Simulation::DoLoad(const string& input_dir,
   gzread(backup_file, &max_timestep_, sizeof(backup_file));
   gzread(backup_file, &dt_, sizeof(dt_));
   gzread(backup_file, &backup_dtimestep_, sizeof(backup_dtimestep_));
-
+  gzread(backup_file, &usecontactarea_, sizeof(usecontactarea_));
+  gzread(backup_file, &output_orientation_, sizeof(output_orientation_));
+  uint16_t size;
+  gzread(backup_file,&size,sizeof(size));
+  for ( uint16_t i = 0; i < size; ++i ) {
+    uint16_t int_sig;
+    gzread(backup_file, &int_sig, sizeof(int_sig));
+    using_signals_.push_back(static_cast<InterCellSignal>(int_sig));
+  }
+  gzread(backup_file,&size,sizeof(size));
+  for ( uint16_t i = 0; i < size; ++i ) {
+    double val;
+    gzread(backup_file,&val,sizeof(double));
+    max_signals_.push_back(val);
+  }
+  for ( uint16_t i = 0; i < size; ++i ) {
+    double val;
+    gzread(backup_file,&val,sizeof(double));
+    min_signals_.push_back(val);
+  }
   pop_->Load(backup_file);
   grid_->Load(backup_file);
+
+  fgt_->Load(backup_file);
+  tree_->Load(backup_file);
 
   // Re-place all the cells in the grid
   for(Cell* cell : pop_->cell_list()) {
@@ -271,6 +324,115 @@ void Simulation::DoLoad(const string& input_dir,
 
   // Open output files
   output_manager_.SetupForResume(input_dir, output_dir);
+}
+
+void Simulation::DoDump(const string& input_dir,
+                        double backup_time, int dump) {
+  // Open backup file
+  char backup_file_path[255];
+  snprintf(backup_file_path, 255,
+          "%s/backup_%06" PRId32,
+          input_dir.c_str(),
+          static_cast<int32_t>(round(backup_time)));
+  gzFile backup_file = gzopen(backup_file_path, "r");
+  if (backup_file == Z_NULL) {
+    printf("%s:%d: error: could not open backup file %s\n",
+            __FILE__, __LINE__, backup_file_path);
+    exit(EXIT_FAILURE);
+  }
+
+  if ( dump == 2 ) { // no json
+    std::cout.setstate(std::ios::failbit); // hack?!  
+  }
+
+  // Check file-type signature ?
+
+  // Load PRNG
+  Alea::instance().Load(backup_file);
+
+  // Load simulation
+  gzread(backup_file, &time_, sizeof(time_));
+  gzread(backup_file, &timestep_, sizeof(timestep_));
+  gzread(backup_file, &max_timestep_, sizeof(backup_file));
+  gzread(backup_file, &dt_, sizeof(dt_));
+  gzread(backup_file, &backup_dtimestep_, sizeof(backup_dtimestep_));
+  gzread(backup_file, &usecontactarea_, sizeof(usecontactarea_));
+  gzread(backup_file, &output_orientation_, sizeof(output_orientation_));
+  cout << "{\n"
+       << "  \"time\": " << time_ << ",\n"; 
+  cout << "  \"timestep\": " << timestep_ << ",\n";
+  cout << "  \"max timestep\": " << max_timestep_ << ",\n";
+  cout << "  \"dt\": " << dt_ << ",\n";
+  cout << "  \"backup dtimestep\": " << backup_dtimestep_ << ",\n";
+  cout << "  \"usecontactarea\": " << usecontactarea_ << ",\n";
+  cout << "  \"output orientation\": " << output_orientation_ << ",\n";
+
+  uint16_t size;
+  gzread(backup_file,&size,sizeof(size));
+  for ( uint16_t i = 0; i < size; ++i ) {
+    uint16_t int_sig;
+    gzread(backup_file, &int_sig, sizeof(int_sig));
+    using_signals_.push_back(static_cast<InterCellSignal>(int_sig));
+  }
+  gzread(backup_file,&size,sizeof(size));
+  for ( uint16_t i = 0; i < size; ++i ) {
+    double val;
+    gzread(backup_file,&val,sizeof(double));
+    max_signals_.push_back(val);
+  }
+  for ( uint16_t i = 0; i < size; ++i ) {
+    double val;
+    gzread(backup_file,&val,sizeof(double));
+    min_signals_.push_back(val);
+  }
+  pop_->Load(backup_file);
+  grid_->Load(backup_file);
+  fgt_->Load(backup_file);
+  
+  uint16_t count = 0;
+  cout << "  \"signals\": [\n";
+  for ( auto signal : using_signals_ ) {
+    cout << "    {\n"
+         << "      \"signal\": \"" << InterCellSignal_Names.at(signal) << "\",\n"
+         << "      \"type\": \"local\",\n"
+         << "      \"min\": " << min_signals_.at(count) << ",\n" 
+         << "      \"max\": " << max_signals_.at(count) << "\n"
+         << "    }" << (signal == using_signals_.back() && fgt_->using_diffusive_signals().size() == 0 ? "" : ",") << "\n";
+    count++;
+  }
+  for ( auto signal : fgt_->using_diffusive_signals() ) {
+    cout << "    {\n"
+         << "      \"signal\": \"" << InterCellSignal_Names.at(signal) << "\",\n"
+         << "      \"type\": \"diffusive\",\n"
+         << "      \"min\": " << min_signals_.at(count) << ",\n"
+         << "      \"max\": " << max_signals_.at(count) << "\n"
+         << "    }" << (signal == fgt_->using_diffusive_signals().back() ? "" : ",") << "\n";
+    count++;
+  }
+  cout << "  ],\n";
+  cout << "  \"cells\": [\n";
+  auto n = pop_->cell_list().size();
+  for (Cell* cell : pop_->cell_list()) {
+    cell->Dump();
+    if ( --n ) cout << ",";
+    cout << "\n";
+  }
+  cout << "  ]\n"
+       << "}\n";
+
+  if ( dump == 2 ) { // restore cout
+    std::cout.clear();
+  }
+
+  tree_->Load(backup_file);
+  if ( dump > 1 ) {
+    tree_->PrintTabularTree(stdout);
+  }
+
+  // Close backup file
+  gzclose(backup_file);
+
+
 }
 
 // =================================================================
@@ -375,6 +537,30 @@ void Simulation::ComputeInteractions() {
   }
 }
 
+void Simulation::ComputeGaussianFields() {
+  // Direct computation of Gaussian fields
+  //for (Cell* cell : pop_->cell_list()) {
+  //  cell->ComputeGaussianFields();
+  //}
+
+  for ( auto signal : fgt_->using_diffusive_signals() ) {
+    fgt_->init_transform(signal);
+    double nb_boxes = pow(sqrt(2.0/fgt_->delta()) + 1,3);
+    // cout << " signal: " << static_cast<int>(signal) << " scaled delta: " << fgt_->delta() << " nb boxes: " << nb_boxes << " ";
+    if ( pop_->cell_list().size() < nb_boxes ) {
+      // cout << "direct ";
+      fgt_->direct_transform();
+    }
+    else
+    {
+      // cout << "fast ";
+      fgt_->fast_transform();
+    }
+    fgt_->finish_transform();
+  }
+
+}
+
 /**
  * Actually apply the update
  *
@@ -406,7 +592,7 @@ void Simulation::ApplyUpdate() {
 
     // If cell marked as "to die", remove it from the grid and from the pop,
     // then step to the next cell
-    if (cell->isDying()) {
+    if (cell->isDead()) {
       tree_->GetNodeFromId(cell->id())->set_time_of_tip(time_);
       grid_->RemoveCell(cell);
       pop_->RemoveCell(cell);
@@ -418,7 +604,7 @@ void Simulation::ApplyUpdate() {
       Cell* newCell = cell->Divide();
       newCells.push_back(newCell);
       grid_->AddCell(newCell);
-      tree_->AddTreeNode(tree_->GetNodeFromId(cell->id()),time_,max_timestep_*dt_,newCell->id(),newCell->cell_type());
+      tree_->AddTreeNode(tree_->GetNodeFromId(cell->id()),time_,max_timestep_*dt_,newCell->id(),newCell->cell_type(),newCell->cell_formalism());
     }
   }
 
@@ -439,6 +625,15 @@ void Simulation::UpdateMinMaxSignals(Cell* cell) {
     }
     if ( cell->get_output(signal) < min_signals_[i] ) {
       min_signals_[i] = cell->get_output(signal);
+    }
+    i++;
+  }
+  for ( auto signal : fgt_->using_diffusive_signals() ) { 
+    if ( cell->gaussian_field_weight(signal) > max_signals_[i] ) {
+      max_signals_[i] = cell->gaussian_field_weight(signal);
+    }
+    if ( cell->gaussian_field_weight(signal) < min_signals_[i] ) {
+      min_signals_[i] = cell->gaussian_field_weight(signal);
     }
     i++;
   }

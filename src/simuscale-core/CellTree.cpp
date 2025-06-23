@@ -32,6 +32,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <cfloat>
+#include <cstring>
 
 #include <CellTree.h>
 
@@ -42,19 +43,66 @@ using std::endl;
 //                             Constructors
 // =================================================================
 CellTree::CellTree(float time) {
-  root_ = AddTreeNode((TreeNode*)NULL,time,0.0,0,CellType::ROOT); // node at time=0.0, with id = 0.
+  root_ = AddTreeNode((TreeNode*)NULL,time,0.0,0,CellType::ROOT,NULL); // node at time=0.0, with id = 0.
 }
 
-TreeNode::TreeNode(uint32_t id, float birth, float tip, CellType cell_type) :
-    id_(id), birth_(birth), tip_(tip), cell_type_(cell_type) {
+TreeNode::TreeNode(uint32_t id, float birth, float tip, CellType cell_type, const char *cell_formalism) :
+    id_(id), birth_(birth), tip_(tip), cell_type_(cell_type), cell_formalism_(cell_formalism) {
 }
 
 
 // =================================================================
 //                            Public Methods
 // =================================================================
-TreeNode* CellTree::AddTreeNode(TreeNode* mother, float time, float tip, uint32_t id, CellType cell_type) {  
-  TreeNode* child = new TreeNode(id,time,tip,cell_type);
+
+void TreeNode::Save(gzFile backup_file) const {
+
+  gzwrite(backup_file,&id_,sizeof(id_));
+  gzwrite(backup_file,&birth_,sizeof(birth_));
+  gzwrite(backup_file,&tip_,sizeof(tip_));
+  int8_t cell_type = static_cast<int8_t>(cell_type_);
+  gzwrite(backup_file, &cell_type, sizeof(cell_type));
+  uint32_t len;
+  if ( cell_formalism_ != NULL ) {
+    len = strlen(cell_formalism_);
+  }
+  else {
+    len = 0;
+  }
+  gzwrite(backup_file, &len, sizeof(len));
+  gzwrite(backup_file, cell_formalism_, len*sizeof(char));
+  uint32_t size = children_.size();
+  gzwrite(backup_file,&size,sizeof(size));
+  for ( auto child : children_ ) {
+    child->Save(backup_file); 
+  }
+
+}
+
+void TreeNode::Load(gzFile backup_file) {
+
+  gzread(backup_file,&id_,sizeof(id_));
+  gzread(backup_file,&birth_,sizeof(birth_));
+  gzread(backup_file,&tip_,sizeof(tip_));
+  int8_t cell_type;
+  gzread(backup_file, &cell_type, sizeof(cell_type));
+  cell_type_ = static_cast<CellType>(cell_type);
+  uint32_t len;
+  gzread(backup_file, &len, sizeof(len));
+  char *cell_formalism = new char[len];
+  gzread(backup_file, cell_formalism, len*sizeof(char));
+  cell_formalism_ = cell_formalism;
+  uint32_t size;
+  gzread(backup_file,&size,sizeof(size));
+  for ( uint32_t i = 0; i < size; ++i ) {
+    TreeNode* child = new TreeNode();
+    child->Load(backup_file);
+    AddChild(child); 
+  }
+}
+
+TreeNode* CellTree::AddTreeNode(TreeNode* mother, float time, float tip, uint32_t id, CellType cell_type, const char *cell_formalism) {  
+  TreeNode* child = new TreeNode(id,time,tip,cell_type,cell_formalism);
   if ( mother != NULL ) {
     mother->AddChild(child);
   }
@@ -64,6 +112,14 @@ TreeNode* CellTree::AddTreeNode(TreeNode* mother, float time, float tip, uint32_
 
 TreeNode* CellTree::GetNodeFromId(uint32_t id) {
   return GetNodeFromIdRecursive(root_,id);
+}
+
+void CellTree::Save(gzFile backup_file) const {
+  root_->Save(backup_file);
+}
+
+void CellTree::Load(gzFile backup_file) {
+  root_->Load(backup_file);
 }
 
 TreeNode* CellTree::GetNodeFromIdRecursive(TreeNode* root, uint32_t id) {
@@ -91,7 +147,8 @@ void CellTree::PrintNewick(FILE *file) const {
 }
 
 void CellTree::PrintTabularTree(FILE *file) const {
-  fprintf(file, "%d %s-%d\n",root_->id(), CellType_Names.at(root_->cell_type()).c_str(), root_->id());
+  fprintf(file, "%d %s %s %d\n",root_->id(), CellType_Names.at(root_->cell_type()).c_str(), 
+      root_->cell_formalism(), root_->id());
   PrintCellListRecursive(root_,file);
   fprintf(file,"#\n");
   PrintTabularTreeRecursive(root_,file);
@@ -185,7 +242,8 @@ void CellTree::PrintCellListRecursive(TreeNode* node, FILE *file) const {
   
   for ( auto child : node->children() ) /* print all child nodes */
   {
-    fprintf(file, "%d %s-%d\n",child->id(), CellType_Names.at(child->cell_type()).c_str(), child->id());
+    fprintf(file, "%d %s %s %d\n",child->id(), CellType_Names.at(child->cell_type()).c_str(), 
+        child->cell_formalism(),child->id());
   }
   for ( auto child : node->children() ) 
   {

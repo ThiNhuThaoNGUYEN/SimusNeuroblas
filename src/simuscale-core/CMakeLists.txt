@@ -2,7 +2,7 @@
 # Library version number
 # ============================================================================
 set(lib_version_major 1)
-set(lib_version_minor 0)
+set(lib_version_minor 2)
 
 # ============================================================================
 # Tell cmake about subdirectories to look into
@@ -18,20 +18,50 @@ find_package(ZLIB REQUIRED)
 # Add the 'generated_headers' target (uses a custom script)
 # ============================================================================
 # custom commands to generate header files
+
+# if CellType.values.in exists in the simulation directory, use it,
+# else if CellType.values.in exists in the plugins directory, use
+# it, else use the default CellType.values.in in the
+# simuscale-core directory
+message(CHECK_START "Looking for CellType.values.in" )
+if(EXISTS ${SIM_DIR}/CellType.values.in)
+  set(CELLTYPE_INPUT_DIR ${SIM_DIR}) 
+elseif(EXISTS ${PROJECT_SOURCE_DIR}/src/plugins/CellType.values.in)
+  set(CELLTYPE_INPUT_DIR ${PROJECT_SOURCE_DIR}/src/plugins) 
+else()
+  set(CELLTYPE_INPUT_DIR ${PROJECT_SOURCE_DIR}/src/simuscale-core)
+endif()
+message(CHECK_PASS "Found in ${CELLTYPE_INPUT_DIR}")
 add_custom_command(
   OUTPUT CellType.h
   COMMAND ${CMAKE_COMMAND}
       -P ${PROJECT_SOURCE_DIR}/cmake/cmake_generate_header.cmake
       --  ${PROJECT_SOURCE_DIR}/src/simuscale-core
+          ${CELLTYPE_INPUT_DIR}
           CellType
-  DEPENDS CellType.h.in CellType.values.in)
+  DEPENDS CellType.h.in ${CELLTYPE_INPUT_DIR}/CellType.values.in)
+
+# if InterCellSignal.values.in exists in the simulation directory, use it,
+# else if InterCellSignal.values.in exists in the plugins directory, use
+# it, else use the default InterCellSignal.values.in in the
+# simuscale-core directory
+message(CHECK_START "Looking for InterCellSignal.values.in" )
+if(EXISTS ${SIM_DIR}/InterCellSignal.values.in)
+  set(SIGNAL_INPUT_DIR ${SIM_DIR}) 
+elseif(EXISTS ${PROJECT_SOURCE_DIR}/src/plugins/InterCellSignal.values.in)
+  set(SIGNAL_INPUT_DIR ${PROJECT_SOURCE_DIR}/src/plugins) 
+else()
+  set(SIGNAL_INPUT_DIR ${PROJECT_SOURCE_DIR}/src/simuscale-core)
+endif()
+message(CHECK_PASS "Found in ${SIGNAL_INPUT_DIR}")
 add_custom_command(
   OUTPUT InterCellSignal.h
   COMMAND ${CMAKE_COMMAND}
       -P ${PROJECT_SOURCE_DIR}/cmake/cmake_generate_header.cmake
       --  ${PROJECT_SOURCE_DIR}/src/simuscale-core
+          ${SIGNAL_INPUT_DIR}
           InterCellSignal
-  DEPENDS InterCellSignal.h.in InterCellSignal.values.in)
+  DEPENDS InterCellSignal.h.in ${SIGNAL_INPUT_DIR}/InterCellSignal.values.in)
 
 # add target params_header (this will execute the custom command)
 add_custom_target(
@@ -64,7 +94,10 @@ add_library(simuscale-core SHARED
   movement/MoveBehaviour.h movement/MoveBehaviour.cpp
   movement/Immobile.h movement/Immobile.cpp
   movement/Mobile.h movement/Mobile.cpp
-  movement/Motile.h movement/Motile.cpp)
+  movement/Motile.h movement/Motile.cpp
+  fgt/FastGaussTransform3D.h fgt/FastGaussTransform3D.cpp
+  fgt/Box3.h fgt/Box3.cpp
+  fgt/Hermite.h fgt/Hermite.cpp)
 # add dependency for generated header files
 add_dependencies(simuscale-core generated_headers)
 # We use C++11

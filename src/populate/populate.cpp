@@ -23,26 +23,9 @@
 //
 // ****************************************************************************
 
+#include "populate.h"
 
-#define GL_GLEXT_PROTOTYPES
-#define GL_SILENCE_DEPRECATION
-
-#include <GLUT/glut.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <getopt.h>
-
-#define DEFAULT_SIGNAL -1 
-#define SIGNAL_NOT_FOUND -1
-#define MAX_SIG_STRLEN 16
-#define MAX_NBR_SIGNAL 1024
-
-#define PR_BS_CLEAR printf("\033[D\033[J")
-
-#define S_SLICES 12
-#define S_STACKS 12
+/******* inline functions *******/
 
 inline GLfloat sign(GLfloat x) 
 {
@@ -63,152 +46,135 @@ inline void clamp(GLfloat *v, GLfloat vmin, GLfloat vmax)
   }
 }
 
-struct sCellSphere
+inline GLfloat normsq3v(GLfloat v[3])
 {
-  int id;
-  float position[3];
-  float color[3];
-  float radius;
-  int   colorindex;
-};
-typedef struct sCellSphere CellSphere;
+  return v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+}
 
-struct worldsize {
-  float x;
-  float y;
-  float z;
-};
 
-GLfloat _colormap[64][3];
-const int _colormap_size = 5;
+GLfloat _colormap[10][3];
+GLfloat _colormap_raster[10][3];
+const int _colormap_size = 10;
 GLfloat _min_signal = 0.0, _max_signal = 100.0;
 GLfloat _min_clip_signal = -INFINITY, _max_clip_signal = INFINITY;
-GLfloat _font_color[3] = {1.0, 1.0, 1.0}; /* default font color is white */
+GLfloat _font_color[3] = {0.250, 0.156, 0.062}; /* default font color */
 GLfloat _x_plane = 1.0 , _y_plane = 1.0 , _z_plane = 1.0;
 int _pos_plane = 2; /* 0: x, 1: y, 2: z */
+GLfloat _x_bulk, _y_bulk, _z_bulk;
 GLfloat _radius = 1.0;
 GLdouble _mouse_x, _mouse_y, _mouse_z;
-int _move_plane = 0;
-int _remove_cell = 0;
 int _within_world = 0;
-GLfloat _mouse_shadow_color[4] = {0.0,0.0,0.0,0.3};
-GLfloat _mouse_overlay_color[4] = {0.8,0.8,0.8,0.8};
-GLfloat _positioning_plane_color[3][4] = {{1.0, 0.9, 0.3, 0.3},
-                                          {0.3, 1.0, 0.9, 0.3},
-                                          {0.9, 0.3, 1.0, 0.3}}; 
-int _cell_to_remove;
+int _mode = MODE_WORLD_BORDER;
+GLfloat _mouse_shadow_color[4]          =  {0.0, 0.0, 0.0, 0.5};
+GLfloat _bulk_area_color[4]             =  {0.6, 0.8, 0.8, 0.3};
+GLfloat _mouse_overlay_color[4]         =  {0.8, 0.8, 0.8, 0.8};
+GLfloat _positioning_plane_color[3][4]  = {{0.8, 0.7, 0.5, 0.2},
+                                           {0.5, 0.8, 0.7, 0.2},
+                                           {0.7, 0.5, 0.8, 0.2}}; 
 int _current_color = 0;
-FILE * _init_file = NULL;
-FILE * logFile  = NULL;
-char _write_mode[3] = "w";
-struct worldsize _worldsize = {0.0, 0.0, 0.0};
-CellSphere * _mycells = NULL;
+FILE * _in_fid = NULL;
+FILE * _flog  = NULL;
+int _editflag = 0;
+int _interactive = 1;
+struct worldsize _worldsize = {40.0, 40.0, 40.0}; /* default world size */
+cell_sphere * _mycells = NULL;
 int _popsize = 0;
 int _mycellscap = 0;
 int _line = 0;
-int _background_white = 0;
 int _clipcell = 0;
-int _draw_world_border = 1;
 char _inputstr[16];
-char * _init_filename;
+char * _out_filename = NULL;
+char * _in_filename = NULL;
+char * _spheroid_pars[NBR_SPHEROID_IN];
+int _nbr_spheroid = 0;
+unsigned int _seed = 1;
 GLuint _SphereDList;
 enum actions { MOVE_EYE, TWIST_EYE, ZOOM, MOVE_NONE, MOVE_PLANE };
 GLint _action;
 GLdouble _xStart = 0.0, _yStart = 0.0;
-GLfloat _nearClip, _farClip, _distance, _twistAngle, _incAngle, _azimAngle;
+GLfloat _near_clip, _far_clip, _distance, _twistAngle, _incAngle, _azimAngle;
+GLfloat _pan_x, _pan_y;
 GLfloat _fovy = 45.0;
 
-void init();
-void read_file();
-void display();
-void reshape (int w, int h);
-void resetView();
-void polarView( GLfloat distance, GLfloat azimuth, GLfloat incidence, GLfloat twist);
-void keyboard(unsigned char key, int x, int y);
-void saveimage();
-int add_cell(GLint x, GLint y);
-int remove_cell(GLint x, GLint y);
-int move_plane(GLint x, GLint y);
-GLvoid mouse( GLint button, GLint state, GLint x, GLint y );
-GLvoid motion( GLint x, GLint y );
-GLvoid passive_motion( GLint x, GLint y );
-void print_help(char* prog_name);
-void on_exit();
-
-void init_colormap()
-{
-  _colormap[0][0] = 1.000000; _colormap[0][1] = 0.200000; _colormap[0][2] = 0.000000;
-  _colormap[1][0] = 1.000000; _colormap[1][1] = 0.666667; _colormap[1][2] = 0.000000;
-  _colormap[2][0] = 0.019608; _colormap[2][1] = 0.800000; _colormap[2][2] = 0.200000;
-  _colormap[3][0] = 0.000000; _colormap[3][1] = 0.666667; _colormap[3][2] = 1.000000;
-  _colormap[4][0] = 0.666667; _colormap[4][1] = 0.200000; _colormap[4][2] = 1.000000;
-}
 
 int main(int argc, char** argv)
 {
 
   /* Define allowed command-line options */
-  const char * options_list = "hf:e";
+  const char * options_list = "he:ns:o:r:";
   static struct option long_options_list[] = {
     { "help",     no_argument, NULL, 'h' },
-    { "file",     required_argument, NULL, 'f' },
-    { "edit",   no_argument, NULL, 'e' },
+    { "edit",     required_argument, NULL, 'e' },
+    { "non-interactive", no_argument, NULL, 'n'},
+    { "worldsize", required_argument, NULL, 's'},
+    { "spheroid", required_argument, NULL, 'o'},
+    { "seed", required_argument, NULL, 'r'},
     { 0, 0, 0, 0 }
   };
-
-  /* Get actual values of the command-line options */
+  char *endptr = NULL;
   int option;
 
-  /* default file name */
-  _init_filename = (char *) malloc(12*sizeof(char));
-  sprintf(_init_filename,"initpop.txt");
+  /* open log file (_flog) named populate.log */
+  if ( ( _flog = fopen("populate.log","w") ) == NULL )
+  {
+    fprintf(stderr, "Error, could not open populate.log.\n");
+    exit(EXIT_FAILURE);
+  }
 
+  /* Get actual values of the command-line options */
   while ((option = getopt_long(argc, argv,
                                options_list, long_options_list, NULL)) != -1)
   {
     switch ( option )
     {
       case 'h' :
-      {
         print_help( argv[0] );
         exit( EXIT_SUCCESS );
-      }
-      case 'f' :
-      {
-        if ( strcmp( optarg, "" ) == 0 )
-        {
-          fprintf(stderr, "ERROR : Option -f or --file : missing argument.\n" );
-          exit( EXIT_FAILURE );
-        }
-
-        _init_filename = (char *) realloc(_init_filename,(strlen(optarg) + 1)*sizeof(char));
-        sprintf( _init_filename, "%s", optarg );
+      case 'e' :
+        _editflag = 1; 
+        _in_filename = optarg;
+        printf("editing %s\n",_in_filename);
         break;
-      }
-      case 'e':
-        snprintf(_write_mode,3,"r+");
+      case 'n':
+        _interactive = 0; /* 0: do not launch the graphical window */
         break;
+      case 's':
+        _worldsize.x = strtof(optarg,&endptr);
+        _worldsize.y = strtof(endptr,&endptr);
+        _worldsize.z = strtof(endptr,&endptr);
+        fprintf(_flog,"option to worldsize: %s\n",optarg);
+        fprintf(_flog,"_worldsize: %f %f %f\n", _worldsize.x, _worldsize.y, _worldsize.z);
+        break;
+      case 'o':
+        _spheroid_pars[_nbr_spheroid] = optarg;
+        _nbr_spheroid++;
+        break;
+      case 'r':
+        _seed = strtol(optarg,&endptr,10);
+        break;
+      default:
+        print_help( argv[0] );
+        exit( EXIT_FAILURE );
     }
   }
 
-  glutInit(&argc, argv);
-  glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
-  glutInitWindowSize (500, 500);
-  glutInitWindowPosition (100, 100);
-  glutCreateWindow ( "Simuscale - Populate cells" );
-  init ();
+  argc -= optind;
+  argv += optind;
 
-  glutDisplayFunc(display);
-  glutReshapeFunc(reshape);
-  glutKeyboardFunc(keyboard);
-  glutMouseFunc(mouse);
-  glutMotionFunc(motion);
-  glutPassiveMotionFunc(passive_motion);
+  if ( argc )
+  {
+    _out_filename = argv[0];
+  }
 
+  if ( _interactive == 1 ) glutInit(&argc, argv);
+  init();
   atexit(on_exit);
 
-  glutPostRedisplay();
-  glutMainLoop();
+  if ( _interactive == 1 )
+  {
+    glutPostRedisplay();
+    glutMainLoop();
+  }
 
   return 0;
 }
@@ -217,30 +183,59 @@ int main(int argc, char** argv)
 void init(void)
 {
 
-  init_colormap();
+  if ( _interactive == 1 ) 
+  {
+    init_graphical_interface();
+  }
+  srand(_seed);
   
-  _worldsize.x = 40;
-  _worldsize.y = 40;
-  _worldsize.z = 40;
-
-  _mycells = (CellSphere*)malloc(sizeof(CellSphere));
+  _mycells = (cell_sphere*)malloc(sizeof(cell_sphere));
   _mycellscap = 1;
+
+   if ( _editflag ) 
+   { /* try reading existing data */ 
+     read_file();
+   }
+
+   if ( _nbr_spheroid ) 
+   {
+     for ( int i = 0; i < _nbr_spheroid; i++ )
+     {
+      add_spheroid(i); 
+     }
+   }
+
+}
+
+void init_graphical_interface()
+{
+  /*************** init graphical window ***************/
+  glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
+  glutInitWindowSize (500, 500);
+  glutInitWindowPosition (100, 100);
+  glutCreateWindow ( "Simuscale - Populate cells" );
+
+  glutDisplayFunc(display);
+  glutReshapeFunc(reshape);
+  glutKeyboardFunc(keyboard);
+  glutSpecialFunc(special_keyboard);
+  glutMouseFunc(mouse);
+  glutMotionFunc(motion);
+  glutPassiveMotionFunc(passive_motion);
+
+  init_colormap();
 
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-   if ( _background_white )
-     glClearColor (1.0, 1.0, 1.0, 1.0);
-   else
-     glClearColor (0.0, 0.0, 0.0, 0.0);
+   glClearColor (0.9, 0.9, 0.9, 1.0); /* window background color */
 
    glShadeModel (GL_SMOOTH);
-   /* glShadeModel (GL_FLAT); */
 
    /* color of the light */
    GLfloat white_light[] = {1.0, 1.0, 1.0, 1.0};
+   GLfloat diffuse_light[] = {0.3,0.3,0.3,1.0}; 
    glLightfv(GL_LIGHT0, GL_AMBIENT, white_light);
-   glLightfv(GL_LIGHT0, GL_DIFFUSE, white_light);
-   glLightfv(GL_LIGHT0, GL_SPECULAR, white_light);
+   glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse_light);
 
    /* position of the light */
    GLfloat light_position[] = {0.0, 0.0, 0.0, 1.0}; /* will move with the viewpoint */
@@ -250,23 +245,17 @@ void init(void)
    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
    /* lighting model */
-   GLfloat global_ambient_light[] = {0.3, 0.3, 0.3, 1.0}; /* to see objects even if no light source */
+   GLfloat global_ambient_light[] = {0.0, 0.0, 0.0, 1.0}; /* to see objects even if no light source */
    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient_light);
    glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_FALSE); /* infinite viewpoint */
    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE); /* back faces are inside the spheres, never seen */
 
    /* material for the objects */
-   GLfloat mat_specular[] = {0.0, 0.0, 0.0, 1.0};
-   GLfloat mat_ambient_refl[] = {0.2, 0.2, 0.2, 1.0};
-   GLfloat mat_shininess[] = {0.0};
-   GLfloat mat_diffuse_color[] = {0.5, 0.5, 0.5, 1.0};
-   // GLfloat mat_emission[] = {0.05, 0.05, 0.05, 0.0};
-   glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient_refl);
-   glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-   glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
-   glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse_color);
-   // glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
-   glColorMaterial(GL_FRONT, GL_DIFFUSE); /* now glColor changes diffusion color */
+   GLfloat mat_ambient_refl[] = {0.0, 0.0, 0.0, 1.0};
+   GLfloat mat_shininess[] = {.0}; 
+   glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient_refl); 
+   glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);  
+   glColorMaterial(GL_FRONT, GL_EMISSION); /* now glColor changes emission color */
 
    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
@@ -281,11 +270,11 @@ void init(void)
    glEnable(GL_STENCIL_TEST);
    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-   /* Set up nearClip and farClip so that ( farClip - nearClip ) > maxObjectSize, */
+   /* Set up near_clip and far_clip so that ( far_clip - near_clip ) > maxObjectSize, */
    /* and determine the viewing distance (adjust for zooming) */
-   _nearClip = 0.1*_worldsize.x;
-   _farClip = _nearClip + 4.0*_worldsize.x;
-   resetView();
+   _near_clip = 0.1*_worldsize.y;
+   _far_clip = _near_clip + 4.0*_worldsize.y;
+   reset_view();
 
    /* display list to store the geometry of a sphere */
    _SphereDList = glGenLists(1);
@@ -293,17 +282,38 @@ void init(void)
    glutSolidSphere(1.0, S_SLICES, S_STACKS);
    glEndList();
 
-   if ( ( logFile = fopen("populate.log","w") ) == NULL )
-   {
-     fprintf(stderr, "Error, could not open populate.log.\n");
-     exit(EXIT_FAILURE);
-   }
+  /*************** end init graphical window ***************/
+}
 
-   if ( _write_mode[0] == 'r' ) 
-   { /* try reading existing data */ 
-     read_file();
-   }
-
+void init_colormap()
+{
+  _colormap[0][0] = 0.003922; _colormap[0][1] = 0.062745; _colormap[0][2] = 0.733333;
+  _colormap[1][0] = 0.003922; _colormap[1][1] = 0.600000; _colormap[1][2] = 0.733333;
+  _colormap[2][0] = 0.062745; _colormap[2][1] = 0.733333; _colormap[2][2] = 0.003922;
+  _colormap[3][0] = 0.733333; _colormap[3][1] = 0.666667; _colormap[3][2] = 0.003922;
+  _colormap[4][0] = 0.733333; _colormap[4][1] = 0.376471; _colormap[4][2] = 0.003922;
+  _colormap[5][0] = 0.733333; _colormap[5][1] = 0.003922; _colormap[5][2] = 0.062745;
+  _colormap[6][0] = 0.666667; _colormap[6][1] = 0.003922; _colormap[6][2] = 0.733333;
+  _colormap[7][0] = 0.188235; _colormap[7][1] = 0.145098; _colormap[7][2] = 0.125490;
+  _colormap[8][0] = 0.533333; _colormap[8][1] = 0.396078; _colormap[8][2] = 0.501961;
+  _colormap[9][0] = 0.733333; _colormap[9][1] = 0.729412; _colormap[9][2] = 0.666667;
+  for (int i = 0; i < _colormap_size; i++ )
+  {
+    for (int j = 0; j < 3; j++)
+    {
+    _colormap_raster[i][j] = _colormap[i][j]*(1.3);
+    }
+  }
+  /* _colormap[0][0] = 0.003922; _colormap[0][1] = 0.207843; _colormap[0][2] = 1.000000; */
+  /* _colormap[1][0] = 0.003922; _colormap[1][1] = 0.800000; _colormap[1][2] = 1.000000; */
+  /* _colormap[2][0] = 0.207843; _colormap[2][1] = 1.000000; _colormap[2][2] = 0.003922; */
+  /* _colormap[3][0] = 1.000000; _colormap[3][1] = 0.933333; _colormap[3][2] = 0.003922; */
+  /* _colormap[4][0] = 1.000000; _colormap[4][1] = 0.564706; _colormap[4][2] = 0.003922; */
+  /* _colormap[5][0] = 1.000000; _colormap[5][1] = 0.003922; _colormap[5][2] = 0.207843; */
+  /* _colormap[6][0] = 0.933333; _colormap[6][1] = 0.003922; _colormap[6][2] = 1.000000; */
+  /* _colormap[7][0] = 0.188235; _colormap[7][1] = 0.145098; _colormap[7][2] = 0.125490; */
+  /* _colormap[8][0] = 0.666667; _colormap[8][1] = 0.584314; _colormap[8][2] = 0.564706; */
+  /* _colormap[9][0] = 1.000000; _colormap[9][1] = 0.996078; _colormap[9][2] = 0.929412; */
 }
 
 void read_file()
@@ -312,16 +322,16 @@ void read_file()
   float x,y,z;
   float r;
 
-  if ( ( _init_file = fopen(_init_filename, _write_mode) ) == NULL)
+  if ( ( _in_fid = fopen(_in_filename,"r") ) == NULL )
   {
-    fprintf(stderr, "Error, file %s is missing.\n", _init_filename);
-    exit(EXIT_FAILURE);
+    /* file does not exist, nothing to read */
+    return;
   }
-  while ( fscanf(_init_file,"%d %f %f %f %f %d\n",&id,&x,&y,&z,&r,&_current_color) != EOF )
+  while ( fscanf(_in_fid,"%d %f %f %f %f %d\n",&id,&x,&y,&z,&r,&_current_color) != EOF )
   {
     if ( _mycellscap <= _popsize )
     {
-      _mycells = (CellSphere*)realloc(_mycells,2*_mycellscap*sizeof(CellSphere));
+      _mycells = (cell_sphere*)realloc(_mycells,2*_mycellscap*sizeof(cell_sphere));
       _mycellscap *= 2;    
     }
 
@@ -337,7 +347,7 @@ void read_file()
     _popsize++;
     
   }
-  fclose(_init_file);
+  fclose(_in_fid);
 
 }
 
@@ -345,52 +355,57 @@ void display(void)
 {
 
   char legend_string[128];
-  /* GLubyte raster_rect[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; */
-  GLubyte raster_rect[32] = {0x00, 0x00, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x3f, 0xfc, 0x00, 0x00};
-  GLubyte raster_border[32] = {0xff, 0xff, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xff, 0xff};
-  /* GLubyte raster_vert[2] = {0xc0, 0x03}; */
-  /* GLubyte raster_horz[2] = {0xff, 0xff}; */
-
   /***** Clear color buffer, depth buffer, stencil buffer *****/
   glClearStencil(0); /* default value */
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 
   /*************** Draw the text and legends ******************/
-  sprintf(legend_string, "r=%.2f, x=%.2f, y=%.2f, z=%.2f %s %s", _radius,_mouse_x,_mouse_y,_mouse_z,_move_plane ? "move plane" : "", _remove_cell ? "remove" : ""); 
+  snprintf(legend_string, 128, "r=%.2f, x=%.2f, y=%.2f, z=%.2f %s %s", 
+      _radius,_mouse_x,_mouse_y,_mouse_z,_mode & MODE_PLANE ? "move plane" : "", 
+      _mode & MODE_ADD_BULK ? "bulk" : ( _mode & MODE_REMOVE ? "remove" : "" ) ); 
   glColor3fv (_font_color);
   glWindowPos2i(15, 15); /* also sets current raster color to white */
   for (size_t i = 0; i < strlen(legend_string); i++) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, legend_string[i]);
 
-
-  glColor3fv(_colormap[_current_color]);
-  glWindowPos2i(300, 10);
-  glBitmap(16, 16, 0.0, 0.0, 0, 0, raster_rect);
-  glColor3f(1.0,1.0,1.0);
-  glWindowPos2i(300, 10);
-  glBitmap(16, 16, 0.0, 0.0, 0, 0, raster_border);
-  sprintf(legend_string, "color index=%d",_current_color); 
+  snprintf(legend_string, 128, "| d: %s | m: %s | %s | %s", 
+      _mode & MODE_REMOVE ? "add mode" : "remove mode",
+      _mode & MODE_PLANE ? "rotate mode" : "plane mode",
+      _mode & MODE_PLANE ? "mouse left: move plane" : "mouse left + shift: rotate view",
+      _mode & MODE_PLANE ?  "" : ( _within_world ? ( 
+          _mode & MODE_REMOVE ? "mouse left: remove cell" : "mouse left: add cell" ) : "" ));
   glColor3fv (_font_color);
-  glWindowPos2i(320, 15); /* also sets current raster color to white */
+  glWindowPos2i(15, glutGet(GLUT_WINDOW_HEIGHT) - 15); /* also sets current raster color to white */
+  for (size_t i = 0; i < strlen(legend_string); i++) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, legend_string[i]);
+
+  glColor3fv(_colormap_raster[_current_color]);
+  glWindowPos2i(346, 8);
+  glBitmap(24, 24, 0.0, 0.0, 0, 0, _raster_rect);
+  glColor3f(1.0,1.0,1.0);
+  glWindowPos2i(346, 8);
+  glBitmap(24, 24, 0.0, 0.0, 0, 0, _raster_border);
+  snprintf(legend_string, 128, "color index: %d",_current_color); 
+  glColor3fv (_font_color);
+  glWindowPos2i(375, 15); /* also sets current raster color to white */
   for (size_t i = 0; i < strlen(legend_string); i++) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, legend_string[i]);
 
   /*********************** Set the view **************************/
   glLoadIdentity ();             /* clear the matrix */
   /* viewing transformation  */
   /* gluLookAt (-1.5*_worldsize, -1.5*_worldsize, 1.5*_worldsize, _worldsize, _worldsize, 0.0, _worldsize, _worldsize, 1.5*_worldsize); */
-  polarView( _distance, _azimAngle, _incAngle, _twistAngle );
+  polar_view( _distance, _azimAngle, _incAngle, _twistAngle );
 
   /******************** Draw the world borders ********************/
-  glColor3f (1.0, 1.0, 1.0); // White
+  glColor3f (0.3, 0.3, 0.3); // dark gray
   glLineWidth(1.0);
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Mesh
 
   float world_size[3] = {_worldsize.x, _worldsize.y, _worldsize.z};
-  float world_margins[3] = {2.0, 2.0, 0.0};
+  float world_margins[3] = {0.05f*_worldsize.x, 0.05f*_worldsize.y, 0.05f*_worldsize.z};
   float total_world_size[3] = {world_size[0] + 2 * world_margins[0],
                                world_size[1] + 2 * world_margins[1],
                                world_size[2] + 2 * world_margins[2]};
 
-  if ( _draw_world_border )
+  if ( _mode & MODE_WORLD_BORDER )
   {
     // Draw outer world borders
     glBegin(GL_QUAD_STRIP);
@@ -469,53 +484,46 @@ void display(void)
   }
   glEnd();
 
-
-  /* square at mouse position */
+  /* guide cell at mouse position + circle shadow at position plane */
   if ( _within_world ) /* if mouse points to coordinate inside world */ 
   {
-    glDepthMask(GL_FALSE);
-    glBegin(GL_QUADS);
-    if ( _pos_plane == 0 ) /* x-plane x = _x_plane */ 
+
+    if ( _mode & MODE_REMOVE )
     {
-      glColor4fv (_mouse_overlay_color);
-      glVertex3d(_mouse_x + 0.15, _mouse_y - 0.8, _mouse_z - 0.8); 
-      glVertex3d(_mouse_x + 0.15, _mouse_y - 0.8, _mouse_z + 0.8); 
-      glVertex3d(_mouse_x + 0.15, _mouse_y + 0.8, _mouse_z + 0.8); 
-      glVertex3d(_mouse_x + 0.15, _mouse_y + 0.8, _mouse_z - 0.8); 
-      glColor4fv (_mouse_shadow_color);
-      glVertex3d(_x_plane + 0.1, _mouse_y - 0.8, _mouse_z - 0.8);
-      glVertex3d(_x_plane + 0.1, _mouse_y - 0.8, _mouse_z + 0.8);
-      glVertex3d(_x_plane + 0.1, _mouse_y + 0.8, _mouse_z + 0.8);
-      glVertex3d(_x_plane + 0.1, _mouse_y + 0.8, _mouse_z - 0.8);
+      glutSetCursor(GLUT_CURSOR_DESTROY);
+      draw_mouse_shadow();
     }
-    else if ( _pos_plane == 1 ) /* y-plane y = _y_plane */
+    else if ( _mode & MODE_ADD_BULK )
     {
-      glColor4fv (_mouse_overlay_color);
-      glVertex3d(_mouse_x - 0.8, _mouse_y - 0.15, _mouse_z - 0.8); 
-      glVertex3d(_mouse_x - 0.8, _mouse_y - 0.15, _mouse_z + 0.8); 
-      glVertex3d(_mouse_x + 0.8, _mouse_y - 0.15, _mouse_z + 0.8); 
-      glVertex3d(_mouse_x + 0.8, _mouse_y - 0.15, _mouse_z - 0.8); 
-      glColor4fv (_mouse_shadow_color);
-      glVertex3d(_mouse_x - 0.8, _y_plane - 0.1, _mouse_z - 0.8);
-      glVertex3d(_mouse_x - 0.8, _y_plane - 0.1, _mouse_z + 0.8);
-      glVertex3d(_mouse_x + 0.8, _y_plane - 0.1, _mouse_z + 0.8);
-      glVertex3d(_mouse_x + 0.8, _y_plane - 0.1, _mouse_z - 0.8);
+      glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
+      if ( _mode & MODE_ADD_BULK_SELECT )
+        draw_bulk_area();
     }
-    else if ( _pos_plane == 2 ) /* z-plane z = _z_plane */
+    else
     {
-      glColor4fv (_mouse_overlay_color);
-      glVertex3d(_mouse_x - 0.8, _mouse_y - 0.8, _mouse_z + 0.15); 
-      glVertex3d(_mouse_x - 0.8, _mouse_y + 0.8, _mouse_z + 0.15); 
-      glVertex3d(_mouse_x + 0.8, _mouse_y + 0.8, _mouse_z + 0.15); 
-      glVertex3d(_mouse_x + 0.8, _mouse_y - 0.8, _mouse_z + 0.15); 
-      glColor4fv (_mouse_shadow_color);
-      glVertex3d(_mouse_x - 0.8, _mouse_y - 0.8, _z_plane + 0.1);
-      glVertex3d(_mouse_x - 0.8, _mouse_y + 0.8, _z_plane + 0.1);
-      glVertex3d(_mouse_x + 0.8, _mouse_y + 0.8, _z_plane + 0.1);
-      glVertex3d(_mouse_x + 0.8, _mouse_y - 0.8, _z_plane + 0.1);
+      glutSetCursor(GLUT_CURSOR_NONE);
+      draw_mouse_shadow();
+      /******* draw guide cell *******/ 
+      glEnable(GL_LIGHTING);
+      glDepthMask(GL_FALSE);
+      glPushMatrix(); /* save V */
+      // glColor4fv(_mouse_overlay_color);
+      glColor4f(_colormap[_current_color][0],
+                _colormap[_current_color][1],
+                _colormap[_current_color][2],
+                0.8);
+      glTranslatef(_mouse_x, _mouse_y, _mouse_z); /* current matrix is VT  */
+      glScalef(_radius,_radius,_radius); /* current matrix is VTS */
+      /* glCallList(_SphereDList); */
+      glutSolidSphere(1.0, S_SLICES, S_STACKS);
+      glPopMatrix(); /* current matrix is restored to V */
+      glDepthMask(GL_TRUE);
+      glDisable(GL_LIGHTING);
     }
-    glEnd();
-    glDepthMask(GL_TRUE);
+  }
+  else
+  {
+    glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
   }
 
   glutSwapBuffers();
@@ -526,49 +534,46 @@ void reshape (int w, int h)
   glViewport (0, 0, (GLsizei) w, (GLsizei) h);
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
-  gluPerspective( _fovy, (1.0*w)/h, _nearClip, _farClip );
+  gluPerspective( _fovy, (1.0*w)/h, _near_clip, _far_clip );
   glMatrixMode (GL_MODELVIEW);
 }
 
 
-void resetView()
+void reset_view()
 {
-  _distance = _nearClip + (_farClip - _nearClip) / 2.0;
+  _distance = _near_clip + (_far_clip - _near_clip) / 2.0;
+  _pan_x = 0.0; 
+  _pan_y = 0.0;
   _twistAngle = 0.0;	/* rotation of viewing volume (camera) */
   _incAngle = 85.0;
-  _azimAngle = 30.0;
+  _azimAngle = -30.0;
 }
 
 
-void polarView( GLfloat distance, GLfloat azimuth, GLfloat incidence, GLfloat twist)
+void polar_view( GLfloat distance, GLfloat azimuth, GLfloat incidence, GLfloat twist)
 {
-  glTranslatef( -_worldsize.x/2.0, -_worldsize.y/2.0, -distance);
-  glRotatef( -twist, 0.0f, 0.0f, 1.0);
-  glRotatef( -incidence, 1.0f, 0.0f, 0.0);
-  glRotatef( -azimuth, 0.0f, 0.0f, 1.0);
+  glTranslatef( _pan_x, _pan_y, 0.0f);
+  glTranslatef( 0.0f, 0.0f, -distance + _worldsize.z/2.0 );
+  glRotatef( -twist, 0.0f, 0.0f, 1.0f);
+  glRotatef( -incidence, 1.0f, 0.0f, 0.0f);
+  glRotatef( azimuth, 0.0f, 0.0f, 1.0f);
+  glTranslatef( -_worldsize.x/2.0, -_worldsize.y/2.0, -_worldsize.z/2.0);
 }
 
 
-void keyboard(unsigned char key, int, int)
+void keyboard(unsigned char key, int x, int y)
 {
 
   switch (key)
   {
     case 'r': /* r or R : reset viewpoint */
-      resetView();
+      reset_view();
       break;
     case 'R':
-      resetView();
+      reset_view();
       break;
     case 'w': /* toggle show/hide world border display */
-      if ( _draw_world_border == 0 )
-      {
-        _draw_world_border = 1;
-      }
-      else
-      {
-        _draw_world_border = 0;
-      }
+      _mode ^= MODE_WORLD_BORDER;
       break;
     case 'x': /* toggle x-plane positioning */
       _pos_plane = 0;
@@ -580,10 +585,10 @@ void keyboard(unsigned char key, int, int)
       _pos_plane = 2;
       break;
     case 'm':
-      _move_plane = 1 - _move_plane;
+      _mode ^= MODE_PLANE;
       break;
     case 'd':
-      _remove_cell = 1 - _remove_cell;
+      _mode ^= MODE_REMOVE;
       break;
     case '+':
       _radius += 0.1;
@@ -599,6 +604,19 @@ void keyboard(unsigned char key, int, int)
       _current_color += _colormap_size - 1;
       _current_color %= _colormap_size;
       break;
+    case 'u':
+      remove_cell_index(_popsize - 1);
+      break;
+    case 'a':
+      add_cell(x,y);
+      break;
+    case 'X':
+      remove_cell(x,y);
+      break;
+    case 'b':
+      _mode &= ~MODE_ADD_BULK_SELECT;
+      _mode ^= MODE_ADD_BULK;
+      break;
     case 's':
       saveimage();
       break;
@@ -610,29 +628,114 @@ void keyboard(unsigned char key, int, int)
   glutPostRedisplay();
 }
 
+void special_keyboard(int key, int, int)
+{
+  int modifiers = glutGetModifiers();
+  switch (key)
+  {
+    case GLUT_KEY_UP:
+      /* printf("Up key pressed\n"); */
+      if ( modifiers & GLUT_ACTIVE_ALT )
+      {
+        _distance -= DELTA_ANGLE*_worldsize.x; /* zoom in */
+      }
+      else if ( modifiers & GLUT_ACTIVE_SHIFT )
+      {
+        _incAngle -= DELTA_ANGLE*_worldsize.z; /* decrease inclination */
+      }
+      else
+      {
+        _pan_y -= DELTA_ANGLE*_worldsize.z;    /* pan down */
+      }
+      glutPostRedisplay();
+      break;
+    case GLUT_KEY_DOWN:
+      /* printf("Down key pressed\n"); */
+      if ( modifiers & GLUT_ACTIVE_ALT )
+      {
+        _distance += DELTA_ANGLE*_worldsize.x; /* zoom out */
+      }
+      else if ( modifiers & GLUT_ACTIVE_SHIFT )
+      {
+        _incAngle += DELTA_ANGLE*_worldsize.z; /* increase declination */
+      }
+      else
+      {
+        _pan_y += DELTA_ANGLE*_worldsize.z; /* pan up */
+      }
+      glutPostRedisplay();
+      break;
+    case GLUT_KEY_LEFT:
+      /* printf("Left key pressed\n"); */
+      if ( modifiers & GLUT_ACTIVE_SHIFT )
+      {
+        /* Adjust the azimuth eye position  */
+        _azimAngle += DELTA_ANGLE*_worldsize.x;
+      }
+      else
+      {
+        _pan_x += DELTA_ANGLE*_worldsize.x; /* pan right */
+      }
+      glutPostRedisplay();
+      break;
+    case GLUT_KEY_RIGHT:
+      /* printf("Right key pressed\n"); */
+      if ( modifiers & GLUT_ACTIVE_SHIFT )
+      {
+        /* Adjust the azimuth eye position  */
+        _azimAngle -= DELTA_ANGLE*_worldsize.x;
+      }
+      else
+      {
+        _pan_x -= DELTA_ANGLE*_worldsize.x; /* pan left */
+      }
+      glutPostRedisplay();
+      break;
+  }
+}
+
 GLvoid mouse( GLint button, GLint state, GLint x, GLint y )
 {
   int modifiers = glutGetModifiers();
+  _action = MOVE_NONE;
   if (state == GLUT_DOWN)
   {
     switch (button)
     {
       case GLUT_LEFT_BUTTON:
-        if ( _remove_cell ) 
+        if ( modifiers & GLUT_ACTIVE_SHIFT ||
+             !_within_world )
         {
-          remove_cell(x,y);
+          _action = MOVE_EYE;
         }
-        else if ( modifiers & GLUT_ACTIVE_SHIFT  )
-        {
-          add_cell(x,y); 
-        }
-        else if ( _move_plane )
+        else if ( _mode & MODE_PLANE )
         {
           _action = MOVE_PLANE;
         }
-        else
+        else 
         {
-          _action = MOVE_EYE;
+          if ( _mode & MODE_ADD_BULK  )
+          {
+            if ( _mode & MODE_ADD_BULK_SELECT ) 
+            {
+              add_bulk();
+            }
+            else
+            {
+              _x_bulk = _mouse_x;
+              _y_bulk = _mouse_y;
+              _z_bulk = _mouse_z;
+            }
+            _mode ^= MODE_ADD_BULK_SELECT;
+          }
+          else if ( _mode & MODE_REMOVE ) 
+          {
+            remove_cell(x,y);
+          }
+          else
+          {
+            add_cell(x,y); 
+          }
         }
         break;
       case GLUT_MIDDLE_BUTTON:
@@ -648,10 +751,6 @@ GLvoid mouse( GLint button, GLint state, GLint x, GLint y )
     _yStart = y;
 
   }
-  else
-  {
-    _action = MOVE_NONE;
-  }
 
 }
 
@@ -664,8 +763,6 @@ int add_cell(GLint x, GLint y)
   GLdouble projection[16];
   GLint view[4];
   GLdouble x_coord,y_coord,z_coord;
-  GLdouble min_dist = INFINITY;
-  GLdouble dist;
 
   glReadPixels(x, window_height - y - 1, 1, 1, GL_STENCIL_INDEX, GL_UNSIGNED_INT, &stencil);
   glReadPixels(x, window_height - y - 1, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
@@ -678,10 +775,20 @@ int add_cell(GLint x, GLint y)
   gluUnProject((GLdouble)x, (GLdouble)(window_height - y - 1),
       depth,model,projection,view,&x_coord,&y_coord,&z_coord);
 
+  /* check that coords are within world boundaries */
+  if ( x_coord < 0.0 || x_coord > _worldsize.x ||
+       y_coord < 0.0 || y_coord > _worldsize.x || 
+       z_coord < 0.0 || z_coord > _worldsize.x )
+  {
+    fprintf(stderr, "\aCoordinates (%f,%f,%f) are out of bound\n", x_coord,y_coord,z_coord);
+    return 1;
+  }
+       
+  
 
   if ( _mycellscap <= _popsize )
   {
-    _mycells = (CellSphere*)realloc(_mycells,2*_mycellscap*sizeof(CellSphere));
+    _mycells = (cell_sphere*)realloc(_mycells,2*_mycellscap*sizeof(cell_sphere));
     _mycellscap *= 2;    
   }
 
@@ -703,6 +810,223 @@ int add_cell(GLint x, GLint y)
   return 0;
 }
 
+void add_bulk()
+{
+  GLfloat x0, x1, y0, y1, z0, z1;
+
+  switch(_pos_plane)
+  {
+    case 0: /* x-plane */
+      x0 = _x_plane;
+      x1 = _x_plane + 0.1;
+      y0 = _y_bulk;
+      y1 = _mouse_y;
+      z0 = _z_bulk;
+      z1 = _mouse_z;
+      break;
+    case 1: /* y-plane */
+      x0 = _x_bulk;
+      x1 = _mouse_x;
+      y0 = _y_plane;
+      y1 = _y_plane - 0.1;
+      z0 = _z_bulk;
+      z1 = _mouse_z;
+      break;
+    case 2: /* z-plane */
+      x0 = _x_bulk;
+      x1 = _mouse_x;
+      y0 = _y_bulk;
+      y1 = _mouse_y;
+      z0 = _z_plane;
+      z1 = _z_plane + 0.1;
+  }
+
+
+  for ( int i = 0; i < 10; i++ )
+  {
+
+    if ( _mycellscap <= _popsize )
+    {
+      _mycells = (cell_sphere*)realloc(_mycells,2*_mycellscap*sizeof(cell_sphere));
+      _mycellscap *= 2;    
+    }
+
+    _mycells[_popsize].id = _popsize+1;
+    _mycells[_popsize].position[0] = x0 + (GLfloat)rand()/RAND_MAX*(x1 - x0); 
+    _mycells[_popsize].position[1] = y0 + (GLfloat)rand()/RAND_MAX*(y1 - y0);
+    _mycells[_popsize].position[2] = z0 + (GLfloat)rand()/RAND_MAX*(z1 - z0);
+    _mycells[_popsize].radius = _radius;
+    _mycells[_popsize].color[0] = _colormap[_current_color][0]; 
+    _mycells[_popsize].color[1] = _colormap[_current_color][1]; 
+    _mycells[_popsize].color[2] = _colormap[_current_color][2];
+    _mycells[_popsize].colorindex = _current_color;
+
+    _popsize++;
+ 
+  }
+  
+  glutPostRedisplay();
+
+}
+
+void add_spheroid(int ind)
+{
+  char    *endptr = NULL;
+  GLfloat  v[3], p[3];
+  int      i = 0;
+  
+  /* read spheroid options 
+   * x y z r n 
+   */
+  GLfloat c[3] = {  strtof(_spheroid_pars[ind],&endptr),
+                    strtof(endptr,&endptr),
+                    strtof(endptr,&endptr) };
+  GLfloat spheriod_radius = strtof(endptr,&endptr);
+  GLfloat cell_radius     = strtof(endptr,&endptr);
+  GLint color = strtol(endptr,&endptr,10);
+  GLint n     = strtol(endptr,&endptr,10);
+  GLint dim   = strtol(endptr,&endptr,16);
+
+  const int dimx = 0x04;
+  const int dimy = 0x02;
+  const int dimz = 0x01;
+
+  while ( i < n ) 
+  {
+    if ( _mycellscap <= _popsize )
+    {
+      _mycells = (cell_sphere*)realloc(_mycells,2*_mycellscap*sizeof(cell_sphere));
+      _mycellscap *= 2;    
+    }
+
+    if ( dim & dimx )
+      v[0] = -1 + 2.0*(GLfloat)rand()/RAND_MAX; 
+    else
+      v[0] = 0.0;
+    if ( dim & dimy )
+      v[1] = -1 + 2.0*(GLfloat)rand()/RAND_MAX;
+    else
+      v[1] = 0.0;
+    if ( dim & dimz )
+      v[2] = -1 + 2.0*(GLfloat)rand()/RAND_MAX;
+    else
+      v[2] = 0.0;
+
+    p[0] = c[0] + spheriod_radius*v[0];
+    p[1] = c[1] + spheriod_radius*v[1];
+    p[2] = c[2] + spheriod_radius*v[2];
+
+    /* fail conditions */
+    if ( p[0] < 0.0 || p[0] > _worldsize.x ||
+         p[1] < 0.0 || p[1] > _worldsize.y ||
+         p[2] < 0.0 || p[2] > _worldsize.z )
+    {  continue; }
+
+    if ( normsq3v(v) > 1 )
+    { continue; }
+
+
+    /* pass: add new cell */
+    _mycells[_popsize].id = _popsize+1;
+    _mycells[_popsize].position[0] = p[0]; 
+    _mycells[_popsize].position[1] = p[1];
+    _mycells[_popsize].position[2] = p[2];
+    _mycells[_popsize].radius = cell_radius;
+    _mycells[_popsize].color[0] = _colormap[color][0]; 
+    _mycells[_popsize].color[1] = _colormap[color][1]; 
+    _mycells[_popsize].color[2] = _colormap[color][2];
+    _mycells[_popsize].colorindex = color;
+
+    _popsize++;
+    i++;
+  }
+}
+
+void draw_bulk_area()
+{
+
+  glDepthMask(GL_FALSE);
+  glBegin(GL_QUADS);
+  glColor4fv (_bulk_area_color);
+  if ( _pos_plane == 0 ) /* x-plane x = _x_plane */ 
+  {
+    glVertex3d(_x_plane + 0.1, _y_bulk, _z_bulk);
+    glVertex3d(_x_plane + 0.1, _mouse_y, _z_bulk);
+    glVertex3d(_x_plane + 0.1, _mouse_y, _mouse_z);
+    glVertex3d(_x_plane + 0.1, _y_bulk, _mouse_z);
+  }
+  else if ( _pos_plane == 1 ) /* y-plane y = _y_plane */
+  {
+    glVertex3d(_x_bulk, _y_plane - 0.1, _z_bulk);
+    glVertex3d(_mouse_x, _y_plane - 0.1, _z_bulk);
+    glVertex3d(_mouse_x, _y_plane - 0.1, _mouse_z);
+    glVertex3d(_x_bulk, _y_plane - 0.1, _mouse_z);
+  }
+  else if ( _pos_plane == 2 ) /* z-plane z = _z_plane */
+  {
+    glVertex3d(_x_bulk, _y_bulk, _z_plane + 0.1);
+    glVertex3d(_mouse_x, _y_bulk, _z_plane + 0.1);
+    glVertex3d(_mouse_x, _mouse_y, _z_plane + 0.1);
+    glVertex3d(_x_bulk, _mouse_y, _z_plane + 0.1);
+  }
+  glEnd();
+  glDepthMask(GL_TRUE);
+}
+
+void draw_mouse_shadow()
+{
+  glDepthMask(GL_FALSE);
+  glBegin(GL_POLYGON);
+  glColor4fv (_mouse_shadow_color);
+  if ( _pos_plane == 0 ) /* x-plane x = _x_plane */ 
+  {
+#if 0
+    glVertex3d(_x_plane + 0.1, _mouse_y - _radius, _mouse_z - _radius);
+    glVertex3d(_x_plane + 0.1, _mouse_y - _radius, _mouse_z + _radius);
+    glVertex3d(_x_plane + 0.1, _mouse_y + _radius, _mouse_z + _radius);
+    glVertex3d(_x_plane + 0.1, _mouse_y + _radius, _mouse_z - _radius);
+#endif
+    for ( int i = 0; i < S_SLICES; i++ )
+    {
+      glVertex3d( _x_plane + 0.1,
+                  _mouse_y + _radius*cos(2*M_PI*i/S_SLICES), 
+                  _mouse_z + _radius*sin(2*M_PI*i/S_SLICES));
+    }
+  }
+  else if ( _pos_plane == 1 ) /* y-plane y = _y_plane */
+  {
+#if 0
+    glVertex3d(_mouse_x - _radius, _y_plane - 0.1, _mouse_z - _radius);
+    glVertex3d(_mouse_x - _radius, _y_plane - 0.1, _mouse_z + _radius);
+    glVertex3d(_mouse_x + _radius, _y_plane - 0.1, _mouse_z + _radius);
+    glVertex3d(_mouse_x + _radius, _y_plane - 0.1, _mouse_z - _radius);
+#endif
+    for ( int i = 0; i < S_SLICES; i++ )
+    {
+      glVertex3d(_mouse_x + _radius*cos(2*M_PI*i/S_SLICES), 
+                 _y_plane + 0.1, 
+                 _mouse_z + _radius*sin(2*M_PI*i/S_SLICES));
+    }
+  }
+  else if ( _pos_plane == 2 ) /* z-plane z = _z_plane */
+  {
+#if 0
+    glVertex3d(_mouse_x - _radius, _mouse_y - _radius, _z_plane + 0.1);
+    glVertex3d(_mouse_x - _radius, _mouse_y + _radius, _z_plane + 0.1);
+    glVertex3d(_mouse_x + _radius, _mouse_y + _radius, _z_plane + 0.1);
+    glVertex3d(_mouse_x + _radius, _mouse_y - _radius, _z_plane + 0.1);
+#endif
+    for ( int i = 0; i < S_SLICES; i++ )
+    {
+      glVertex3d(_mouse_x + _radius*cos(2*M_PI*i/S_SLICES), 
+                 _mouse_y + _radius*sin(2*M_PI*i/S_SLICES), 
+                 _z_plane + 0.1);
+    }
+  }
+  glEnd();
+  glDepthMask(GL_TRUE);
+}
+
 int remove_cell(GLint x, GLint y)
 {
   int window_height = glutGet(GLUT_WINDOW_HEIGHT);
@@ -713,6 +1037,8 @@ int remove_cell(GLint x, GLint y)
   GLdouble x_coord,y_coord,z_coord;
   GLdouble min_dist = INFINITY;
   GLdouble dist;
+
+  int to_remove;
 
   glReadPixels(x, window_height - y - 1, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
 
@@ -734,11 +1060,26 @@ int remove_cell(GLint x, GLint y)
     if ( dist < min_dist )
     {
       min_dist = dist; 
-      _cell_to_remove = i;
+      to_remove = i;
     }
   }
 
-  for ( int i = _cell_to_remove; i < _popsize -  1 ; i++ )
+  remove_cell_index(to_remove);
+
+  glutPostRedisplay();
+  return 1;
+
+}
+
+void remove_cell_index(int to_remove)
+{
+
+  if ( to_remove < 0 )
+  {
+    return;
+  }
+
+  for ( int i = to_remove; i < _popsize -  1 ; i++ )
   {
     /* shift cell i+1 -> cell i */
     _mycells[i].position[0] = _mycells[i+1].position[0];
@@ -752,17 +1093,12 @@ int remove_cell(GLint x, GLint y)
   }
   _popsize--;
 
-
-  glutPostRedisplay();
-  return 1;
-
 }
 
 int move_plane(GLint x, GLint y)
 {
 
   int window_height = glutGet(GLUT_WINDOW_HEIGHT);
-  int window_width = glutGet(GLUT_WINDOW_WIDTH);
   GLfloat depth;
   GLdouble model[16];
   GLdouble projection[16];
@@ -784,15 +1120,15 @@ int move_plane(GLint x, GLint y)
   {
     case 0:
       _x_plane += 0.02*_worldsize.x*sign(new_x - old_x)*(fabs(new_x - old_x) < 0.02*_worldsize.x);
-      clamp(&_x_plane,0,_worldsize.x);
+      clamp(&_x_plane,0.0,_worldsize.x);
       break;
     case 1:
       _y_plane += 0.02*_worldsize.y*sign(new_y - old_y)*(fabs(new_y - old_y) < 0.02*_worldsize.y);
-      clamp(&_y_plane,0,_worldsize.y);
+      clamp(&_y_plane,0.0,_worldsize.y);
       break;
     case 2:
       _z_plane += 0.02*_worldsize.z*sign(new_z - old_z)*(fabs(new_z - old_z) < 0.02*_worldsize.z);
-      clamp(&_z_plane,0,_worldsize.z);
+      clamp(&_z_plane,0.0,_worldsize.z);
       break;
   }
 
@@ -828,6 +1164,9 @@ GLvoid motion( GLint x, GLint y )
       break;
   }
 
+  /* update position of mouse on plane */
+  mouse_on_plane(x,y);
+
   /* Update the stored mouse position for later use */
   _xStart = x;
   _yStart = y;
@@ -836,6 +1175,14 @@ GLvoid motion( GLint x, GLint y )
 }
 
 GLvoid passive_motion( GLint x, GLint y)
+{
+
+  mouse_on_plane(x,y);
+
+  glutPostRedisplay();
+}
+
+void mouse_on_plane( GLint x, GLint y)
 {
   int window_height = glutGet(GLUT_WINDOW_HEIGHT);
   int window_width = glutGet(GLUT_WINDOW_WIDTH);
@@ -868,7 +1215,6 @@ GLvoid passive_motion( GLint x, GLint y)
     _within_world = 0;
   }
 
-  glutPostRedisplay();
 }
 
 
@@ -880,16 +1226,16 @@ void saveimage()
     char filepath[64];
     FILE *fid;
     char mn[] = "BM";
-    char creator[] = "SCVW";
+    char creator[] = "SCPP";
     unsigned int offset = 0x36;  /* = 54: header=14 and DIB=40 */
     unsigned int dibsize = 0x28; /* = 40 */
     unsigned int zero = 0x0;     /* = 00 00 00 00 */
     unsigned int resolution = 2835; /* points per meter = 72dpi */
-    GLsizei nrChannels = 3;         
+    GLsizei nr_channels = 3;         
     unsigned int image_size;
-    unsigned int bufferSize = window_width * window_height * nrChannels; /* size in bytes */
-    image_size = window_width * window_height * nrChannels + offset; /* total image size on disk */
-    buffer = (char*)malloc(bufferSize * sizeof(char));
+    unsigned int buffer_size = window_width * window_height * nr_channels; /* size in bytes */
+    image_size = window_width * window_height * nr_channels + offset; /* total image size on disk */
+    buffer = (char*)malloc(buffer_size * sizeof(char));
     glPixelStorei(GL_PACK_ALIGNMENT, 4);
     glReadBuffer(GL_FRONT);
     glReadPixels(0, 0, window_width, window_height, GL_BGR, GL_UNSIGNED_BYTE, buffer);
@@ -902,7 +1248,7 @@ void saveimage()
     }
     printf("image: %s\n",filepath);
     printf("  window_size: %u x %u\n",window_width,window_height);
-    printf("  buffer size: %u bytes\n",bufferSize);
+    printf("  buffer size: %u bytes\n",buffer_size);
     printf("  total size:  %u bytes\n",image_size);
 
     /* bitmap header: 14 bytes */
@@ -927,7 +1273,7 @@ void saveimage()
     fwrite(&zero,4,1,fid);             /* default important colors: 0 - 4 bytes */
 
     /* image raw data, not memory aligned */
-    fwrite(buffer,1,bufferSize,fid);   /* write image raw data */
+    fwrite(buffer,1,buffer_size,fid);   /* write image raw data */
 
     /* clean up */
     free(buffer);
@@ -936,59 +1282,75 @@ void saveimage()
 
 void on_exit() 
 {
-  
-  if ( ( _init_file = fopen(_init_filename, "w") ) == NULL)
+  FILE *out_fid;
+  if ( ( out_fid = fopen(_out_filename, "w") ) == NULL)
   {
-    fprintf(stderr, "Error, could not write to output file %s.\n", _init_filename);
-    /* exit(EXIT_FAILURE); */
-    _init_file = stdout;
+    /* _out_filename cannot be opened, perhaps because it was not set 
+     * revert silently to stdout
+     */
+    out_fid = stdout;
   }
   for ( int i = 0; i < _popsize ; i++ )
   {
-    fprintf(_init_file, "%d %f %f %f %f %d\n", _mycells[i].id,
+    fprintf(out_fid, "%d %f %f %f %f %d\n", _mycells[i].id,
                                            _mycells[i].position[0],
                                            _mycells[i].position[1],
                                            _mycells[i].position[2],
                                            _mycells[i].radius,
                                            _mycells[i].colorindex);
   }
-  if ( _init_file != stdout )
-    fclose(_init_file);
-  fclose(logFile);
-  printf("%d lines written in file %s\n",_popsize,_init_filename);
-  free(_init_filename);
+  if ( out_fid != stdout )
+    fclose(out_fid);
+  fclose(_flog);
   free(_mycells);
 }
 
 void print_help( char* prog_name )
 {
-  printf( "\n************* Simuscale - Populate ************* \n\n" );
   printf( "\n\
-Usage : %s -h\n\
-   or : %s [options]\n\n\
+Usage : " fmt(bb) "%s" fmt(plain) " -h\n\
+   or : " fmt(bb) "%s" fmt(plain) " [" options_opt "] [" file_opt "]\n\n\
+Create or edit an initial cell population dataset and print it to \
+" fmt(ul) "file" fmt(plain) ". \n\
+If " fmt(ul) "file" fmt(plain) " argument is missing, the content is printed to standard output.\n\
+\n\
 \tOptions\n\n\
-\t-h or --help       Display this screen\n\
-\t-f or --file s     Set output file to s (defaults\n\
-\t                   to initpop.txt)\n\
-\t-e or --edit       If output file exists, load existing\n\
-\t                   data.\n\
-\n\
-\tRuntime commands\n\
-\n\
-\tr or R             Reset 3D view\n\
-\tw                  Toggle worldborder\n\
-\tx, y, or z         Activate x, y, or z positioning plane\n\
-\tm                  Toggle plane moving mode\n\
-\td                  Toggle cell delete mode\n\
-\t-,+                Decrease, increase radius\n\
-\ts                  Save current frame as an image (bitmap)\n\
-\n\
-\tmouse + left click          In normal mode: move view,\n\
-\t                            In cell delete mode: delete cell\n\
-\t                            In plane moving mode: move plane along normal\n\
-\tmouse + shift + left click  Add a new cell\n\
-\n\
-\tPress ESC or q to quit.\n\n",\
-   prog_name, prog_name );
+\t" fmt(bb) "-e " file_opt  ", " fmt(bb) "--edit=" file_opt             "\t\tIf " file_opt " exists, first load existing data from " file_opt "\n\
+\t" fmt(bb) "-h" fmt(plain) ", " fmt(bb) "--help" fmt(plain)            "\t\t\tDisplay this screen\n\
+\t" fmt(bb) "-n" fmt(plain) ", " fmt(bb) "--non-interactive" fmt(plain) "\t\tRun without graphical interface\n\
+\t" fmt(bb) "-o " list_opt ", " fmt(bb) "--spheroid="  list_opt         "\tGenerate a spheroid with specifications " list_opt "='x y z s r c n d',\n\
+"                                                                       "\t\t\t\t\tn cells centered at x y z, of total radius s, cell radius r, \n\
+"                                                                       "\t\t\t\t\tcolor c (c=0...9}), along dimension d\n\
+"                                                                       "\t\t\t\t\t(octal value: 4:x, 2:y, 1:z). Up to %d spheroids can be generated\n\n\
+\t" fmt(bb) "-s " list_opt ", " fmt(bb) "--worldsize=" list_opt         "\tSet world size to " list_opt "='x y z' (default: 40 40 40)\n\
+Runtime commands\n\n\
+\tmouse\n\
+\t" fmt(bb) "shift+left button" fmt(plain)    "\tRotate viewpoint\n\
+\t" fmt(bb) "right button     " fmt(plain)    "\tZoom in or zoom out\n\
+\t" fmt(bb) "left click " fmt(plain)          "\t\tIn add mode: add a new cell\n\
+"                                             "\t\t\t\tIn plane mode: move plane along its normal\n\
+"                                             "\t\t\t\tIn remove mode: delete cell\n\n\
+\tkeyboard\n\
+\t" fmt(bb) "◀ (left) " fmt(plain) "   \tPan left\n\
+\t" fmt(bb) "▶ (right)" fmt(plain) "   \tPan right\n\
+\t" fmt(bb) "▲ (up)   " fmt(plain) "   \tPan up\n\
+\t" fmt(bb) "▼ (down) " fmt(plain) "   \tPan down\n\
+\t" fmt(bb) "alt+▲    " fmt(plain) "   \tZoom in (same as right button)\n\
+\t" fmt(bb) "alt+▼    " fmt(plain) "   \tZoom out (same as right button)\n\
+\t" fmt(bb) "shift+◀  " fmt(plain) "   \tRotate left\n\
+\t" fmt(bb) "shift+▶  " fmt(plain) "   \tRotate right\n\
+\t" fmt(bb) "shift+▲  " fmt(plain) "   \tIncrease inclination\n\
+\t" fmt(bb) "shift+▼  " fmt(plain) "   \tDecrease inclination\n\
+\t" fmt(bb) "-" fmt(plain) ", " fmt(bb) "+" fmt(plain) "        \tDecrease, increase radius\n\
+\t" fmt(bb) "[" fmt(plain) ", " fmt(bb) "]" fmt(plain) " \t\tCycle through cell colors\n\
+\t" fmt(bb) "a" fmt(plain) "          \tAdd a cell at mouse position            \n\
+\t" fmt(bb) "d" fmt(plain) "          \tToggle cell delete mode\n\
+\t" fmt(bb) "m" fmt(plain) "          \tToggle plane moving mode\n\
+\t" fmt(bb) "r" fmt(plain) ", " fmt(bb) "R" fmt(plain) "     \tReset 3D view\n\
+\t" fmt(bb) "s" fmt(plain) "          \tSave current frame as an image (bitmap)\n\
+\t" fmt(bb) "w" fmt(plain) "          \tToggle world border\n\
+\t" fmt(bb) "x" fmt(plain) ", " fmt(bb) "y" fmt(plain) ", " fmt(bb) "z" fmt(plain) " \tActivate x, y, or z positioning plane\n\
+\t" fmt(bb) "ESC,q,Q  " fmt(plain) "   \tquit\n\n",\
+   prog_name, prog_name, NBR_SPHEROID_IN );
 }
 

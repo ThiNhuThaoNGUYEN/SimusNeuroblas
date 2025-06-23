@@ -18,23 +18,25 @@ if(${i_double_dash} EQUAL ${CMAKE_ARGC})
 endif()
 # Exit if the number of remaining arguments is not correct
 math(EXPR nb_remaining_args "${CMAKE_ARGC} - ${i_double_dash} - 1")
-if(NOT ${nb_remaining_args} EQUAL 2)
-  message(FATAL_ERROR "script requires 2 arguments, ${nb_remaining_args} provided")
+if(NOT ${nb_remaining_args} EQUAL 3)
+  message(FATAL_ERROR "script requires 3 arguments, ${nb_remaining_args} provided")
 endif()
 
 # Get arg values
 math(EXPR i_arg "${i_double_dash} + 1")
-set(INPUT_DIR ${CMAKE_ARGV${i_arg}})
+set(HEADER_INPUT_DIR ${CMAKE_ARGV${i_arg}})
+math(EXPR i_arg "${i_arg} + 1")
+set(VAL_INPUT_DIR ${CMAKE_ARGV${i_arg}})
 math(EXPR i_arg "${i_arg} + 1")
 set(FILE_CANONICAL_NAME ${CMAKE_ARGV${i_arg}})
 
 # Read input values from provided value file
-file(STRINGS "${INPUT_DIR}/${FILE_CANONICAL_NAME}.values.in" lines)
+file(STRINGS "${VAL_INPUT_DIR}/${FILE_CANONICAL_NAME}.values.in" lines)
 foreach(line ${lines})
   string(STRIP "${line}" val)
   # check that line is a valid identifier
   if (NOT val MATCHES "^[a-zA-Z_]+[a-zA-Z_0-9]*")
-    message(SEND_ERROR "In ${INPUT_DIR}/${FILE_CANONICAL_NAME}.values.in, name ${val} is not a valid identifier")
+    message(SEND_ERROR "In ${VAL_INPUT_DIR}/${FILE_CANONICAL_NAME}.values.in, name ${val} is not a valid identifier")
   else()
     list(APPEND values ${val})
   endif()
@@ -42,7 +44,7 @@ endforeach()
 
 # Copy the content of .h.in file with injection on #VALUES and #MAP_VALUES tags
 file(WRITE "${FILE_CANONICAL_NAME}.h" "")
-file(STRINGS "${INPUT_DIR}/${FILE_CANONICAL_NAME}.h.in" header_lines)
+file(STRINGS "${HEADER_INPUT_DIR}/${FILE_CANONICAL_NAME}.h.in" header_lines)
 foreach(header_line ${header_lines})
   string(STRIP "${header_line}" stripped_line)
   if ("${stripped_line}" STREQUAL "#VALUES")
