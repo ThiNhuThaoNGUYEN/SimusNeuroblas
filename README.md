@@ -1,14 +1,16 @@
+
 Neuroblastoma
 ==============
 
-Videos links available on OSF
+Video links available on OSF
 
-Movement "Mobile": https://osf.io/25cy4/files/umx85
+Cell motion:
 
-Movement "Motile": https://osf.io/25cy4/files/tz3xj
+Mobile: https://osf.io/25cy4/files/umx85
 
-Signalling diffusion: https://osf.io/25cy4/files/pzjgv
+Motile: https://osf.io/25cy4/files/tz3xj
 
+Signalling diffusion with movement "Mobile": https://osf.io/25cy4/files/pzjgv
 
 
 
