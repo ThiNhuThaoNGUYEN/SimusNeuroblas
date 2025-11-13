@@ -16,7 +16,7 @@ set(SIM_DIR "" CACHE PATH "path to param.in file")
 # ============================================================================
 # Tell cmake about subdirectories to look into
 # ============================================================================
-add_subdirectory(view)
+#add_subdirectory(view)
 #add_subdirectory(populate)
 #add_subdirectory(lineagetree)
 add_subdirectory(simuscale-core)

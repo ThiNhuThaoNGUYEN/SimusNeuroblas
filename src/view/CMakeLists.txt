@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 
 
 # ============================================================================
@@ -24,9 +24,10 @@ find_package(GLUT REQUIRED)
 
 
 # ============================================================================
-# Add target view add its dependencies
+# Add targets view colormap and their dependencies
 # ============================================================================
 add_executable(view view.cpp)
+add_executable(colormap colormap.c)
 # We use C++11
 target_compile_options(view PRIVATE "-std=c++11")
 
