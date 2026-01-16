@@ -8,15 +8,11 @@ setwd(".")
 DATA <- read.csv('trajectory_copie.txt', header = F, sep = " ")
 #DATA <- read.csv('/Users/thao_admin/Documents/Cancer_simuscale/cancer_simuscale/run/cancer/trajectory_1421746920 copie.txt', header = F, sep = " ")
 
-head(DATA)
 
-DATA <-DATA[ -c(22) ]
+DATA <-DATA[ -c(23) ]
+colnames(DATA) <- c("TIME","N","ID","X","Y","Z","R","Type","status","TAG","S_S","S2","D_D","VOLUME","REMEMBER_DIVISION","CANCER_S","CANCER_D", "CANCER_P", "CANCER_mRNA_S", "CANCER_mRNA_D1", "CANCER_mRNA_P"," S2_D")
 
-colnames(DATA) <- c("TIME","N","ID","X","Y","Z","R","Type","TAG","S_S","D_D","VOLUME","REMEMBER_DIVISION","CANCER_S","CANCER_D",
-                    "CANCER_D2", "CANCER_P", "CANCER_mRNA_S", "CANCER_mRNA_D1", "CANCER_mRNA_D2", "CANCER_mRNA_P")
-
-head(DATA)
-
+#print(DATA$TIME[length(DATA$TIME)])
 
 ### whole data
 Day_0h <- filter(DATA, DATA$TIME == 0.00)
@@ -176,15 +172,16 @@ Ent_p <- format(round(as.numeric(Ent_p), 3), nsmall = 3)
 Ent_p <- 0.}
 
 print(Ent_p)
-Thre <- read.csv('kineticsparam.txt',  header = T, sep = "", dec =".")
-Th <- Thre['S_diff'] #D_stem']#Thre['V_SS']
-Th2 <- Thre['S_stem'] 
+Thre <- read.table('kineticsparam.txt', header = T, sep = "", dec =".")
+#Thre <- read.csv('kineticsparam.txt', header = T, sep = "\t")
+Th <- Thre['D_stem'] #Thre['V_SS']
+Th2 <- Thre['S_stem']#Thre['V_D'] 
 #Thre['S_stem']#Thre['V_SS'] #Thre['d1'] #Thre['D_stem']
 #Th
 #######
 
-df <- data.frame(Sig_DD=c(Th),
-                 Sig=c(Th2),
+df <- data.frame(Threshold=c(Th),#V_SS=c(Th),#Threshold=c(Th),
+                 Sig=c(Th2),#V_D=c(Th2),#Sig=c(Th2),
                  Pos=c(Pos),
                  Ne=c(Neg),
                  Mean_P=c(Mean_P),
