@@ -19,7 +19,7 @@ Guide step by step to create the last figure (Figure 6) in our paper of Neurobla
 Since running simulations in Simuscale in parallel is not yet available, you will need
 to do this manually by creating several new folders and using MPI to run the jobs.
 
-First, copy the file "Launch_cancer1.py" and the five input files "param_diffusive_1_1to5.in"
+First, copy the file `Launch_cancer1.py` and the five input files `param_diffusive_1_1to5.in`
 (which use the same diffusion coefficient delta = 1, but different random seeds) outside
 the Neuroblastoma folder. Then run:
 
@@ -29,10 +29,23 @@ This will create five new folders corresponding to the same diffusion coefficien
 For other diffusion coefficients, repeat the same procedure.
  
 
+Next, run the newly created Slurm batch script `mega_batch_type_K1.sh` using:
 
+	./mega_batch_type_K1.sh
 
+This will submit five Slurm jobs. After the simulations have completed, you will receive an email notification 
+(note: replace the email address in the Python script with your own).
 
+To calculate the four statistical indices, copy the files `Launch_R_data1.py` and `index.R` to the same
+directory as the previous files (outside the Neuroblastoma folder). Then run:
 
+	python Launch_R_data1.py
+
+This will copy `index.R` into each of the five newly created folders. Finally, submit the Slurm batch script:
+	
+	./mega_batch_data1.sh
+
+This will generate the four indices for this case (delta = 1).
 
 
 
@@ -671,5 +684,6 @@ bool Cell_ODE::registered_ =
 
 ### Override pure abstract methods of base class
 This is where you actually define the specifics of the formalism you are adding
+
 
 

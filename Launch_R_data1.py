@@ -11,7 +11,7 @@ npc=5 # number of parallel calculation
 for numero_simul in range(1,npc+1):
 
  # Copy the needed files into each dossier folder
-   os.system("cp -r "+"index.R"+" ./"+nom_dossiers+str(numero_simul)+"/simuscale/run/cancer/"+"/.")
+   os.system("cp -r "+"index.R"+" ./"+nom_dossiers+str(numero_simul)+"/SimusNeuroblas/run/cancer/"+"/.")
 
     #c copy and modify the retype.sh file
    redata=open(nom_dossiers+str(numero_simul)+'/redata.sh','w')
