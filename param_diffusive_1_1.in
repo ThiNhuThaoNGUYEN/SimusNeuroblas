@@ -1,0 +1,33 @@
+#########################
+# Simulation parameters
+#########################
+PRNG_SEED          1421746927
+MAXTIME            1000000.0
+MAXPOP             50000
+DT                 0.1
+ADD_POPULATION     15 STEM CANCER MOBILE 10 1.0
+
+WORLDSIZE 80 80 80
+
+USECONTACTAREA  1 
+
+#########################
+# Cell parameters
+#########################
+R_RATIO            0.90
+
+#########################
+# Output parameters
+#########################
+SIGNAL  CANCER_TYPE
+SIGNAL  STEM_CONTACT
+SIGNAL  S2 DIFFUSIVE 1 EPSILON 1e-2
+SIGNAL  SYP_CONTACT
+SIGNAL	VOLUME
+SIGNAL	REMEMBER_DIVISION
+SIGNAL	CANCER_S
+SIGNAL	CANCER_D1
+SIGNAL	CANCER_P
+SIGNAL	CANCER_mRNA_S
+SIGNAL	CANCER_mRNA_D1
+SIGNAL	CANCER_mRNA_P
