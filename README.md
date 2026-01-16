@@ -1,4 +1,3 @@
-
 Neuroblastoma
 ==============
 
@@ -11,6 +10,29 @@ Mobile: https://osf.io/25cy4/files/umx85
 Motile: https://osf.io/25cy4/files/tz3xj
 
 Signalling diffusion with movement "Mobile": https://osf.io/25cy4/files/pzjgv
+
+
+
+Guide step by step to create the last figure (Figure 6) in our paper of Neuroblastoma
+============== 
+
+Since running simulations in Simuscale in parallel is not yet available, you will need
+to do this manually by creating several new folders and using MPI to run the jobs.
+
+First, copy the file "Launch_cancer1.py" and the five input files "param_diffusive_1_1to5.in"
+(which use the same diffusion coefficient delta = 1, but different random seeds) outside
+the Neuroblastoma folder. Then run:
+
+	python Launch_cancer1.py
+
+This will create five new folders corresponding to the same diffusion coefficient (delta = 1).
+For other diffusion coefficients, repeat the same procedure.
+ 
+
+
+
+
+
 
 
 
