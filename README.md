@@ -13,7 +13,7 @@ Signalling diffusion with movement "Mobile": https://osf.io/25cy4/files/pzjgv
 
 
 
-Guide step by step to create the last figure (Figure 6) in our paper of Neuroblastoma
+Guide to Creating Figures 6A–D in the Neuroblastoma Paper
 ============== 
 
 Since running simulations in Simuscale in parallel is not yet available, you will need
@@ -45,7 +45,14 @@ This will copy `index.R` into each of the five newly created folders. Finally, s
 	
 	./mega_batch_data1.sh
 
-This will generate the four indices for this case (delta = 1).
+This will generate the four indices for this case (delta = 1). Repeat the same procedure for the other
+diffusion coefficient values: delta = 1.5, 2, 2.25, and 2.5.
+
+Finally, copy file `plot_index.py` and run
+
+	python plot_index.py
+
+This computes the mean and standard deviation of the four indices, as shown in Figure 6A-D.
 
 
 
