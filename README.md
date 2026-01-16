@@ -16,8 +16,7 @@ Signalling diffusion with movement "Mobile": https://osf.io/25cy4/files/pzjgv
 Guide to Creating Figures 6A–D in the Neuroblastoma Paper
 ============== 
 
-Since running simulations in Simuscale in parallel is not yet available, you will need
-to do this manually by creating several new folders and using MPI to run the jobs.
+Since running simulations in Simuscale in parallel is not yet available, the simulations must be performed manually by creating multiple folders and using MPI to run the jobs.
 
 First, copy the file `Launch_cancer1.py` and the five input files `param_diffusive_1_1to5.in`
 (which use the same diffusion coefficient delta = 1, but different random seeds) outside
@@ -25,7 +24,7 @@ the Neuroblastoma folder. Then run:
 
 	python Launch_cancer1.py
 
-This will create five new folders corresponding to the same diffusion coefficient (delta = 1).
+Five new folders corresponding to the diffusion coefficient delta = 1 will be created.
 For other diffusion coefficients, repeat the same procedure.
  
 
@@ -33,7 +32,7 @@ Next, run the newly created Slurm batch script `mega_batch_type_K1.sh` using:
 
 	./mega_batch_type_K1.sh
 
-This will submit five Slurm jobs. After the simulations have completed, you will receive an email notification 
+Five Slurm jobs are submitted. After the simulations have completed, you will receive an email notification 
 (note: replace the email address in the Python script with your own).
 
 To calculate the four statistical indices, copy the files `Launch_R_data1.py` and `index.R` to the same
@@ -41,18 +40,18 @@ directory as the previous files (outside the Neuroblastoma folder). Then run:
 
 	python Launch_R_data1.py
 
-This will copy `index.R` into each of the five newly created folders. Finally, submit the Slurm batch script:
+The file `index.R` is copied into each of the five newly created folders. The indices are then obtained by
+submitting the Slurm batch script:
 	
 	./mega_batch_data1.sh
 
-This will generate the four indices for this case (delta = 1). Repeat the same procedure for the other
-diffusion coefficient values: delta = 1.5, 2, 2.25, and 2.5.
+This procedure is applied to the remaining diffusion coefficient values: delta = 1.5, 2, 2.25, and 2.5.
 
 Finally, copy file `plot_index.py` and run
 
 	python plot_index.py
 
-This computes the mean and standard deviation of the four indices, as shown in Figure 6A-D.
+The mean and standard deviation of the four indices are computed, as shown in Figure 6A-D.
 
 
 
