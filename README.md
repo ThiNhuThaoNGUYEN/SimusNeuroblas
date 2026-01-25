@@ -21,12 +21,17 @@ Input files include `param.in`, `kineticsparam.txt` and `GeneInteractionsMatrix.
 In `param.in`, the simulation parameters are defined as follows. More general information is provided in the Running the simulations section below
 
 PRNG_SEED: random number generator seed
+
 MAXTIME: simulation time limit
+
 MAXPOP: maximum population size (if reached before the time limit); here set to 50,000 cells.
+
 DT: simulation time step
+
 ADD_POPULATION: used to initialize the cell population, for example 
-"15 STEM CANCER MOBILE 10 1.0"
-corresponds to 15 stem cells, cell type: cancer, movement type: mobile, time to reach double cell size: 10 hours, minimum cell volume: 1
+
+"15 STEM CANCER MOBILE 10 1.0" corresponds to 15 stem cells, cell type: cancer, movement type: mobile, time to reach double cell size: 10 hours, minimum cell volume: 1
+
 WORLDSIZE: simulation domain size; here set to 80 x 80 x80
 
 
