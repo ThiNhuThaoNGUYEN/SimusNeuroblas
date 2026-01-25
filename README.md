@@ -14,6 +14,7 @@ Signalling diffusion with movement "Mobile": https://osf.io/25cy4/files/pzjgv
 
 Guide to run SimuScale for the Neuroblastoma project and reproduce Figures 4, 5, and 6
 ==============
+
 Figures 4 and 5 show signaling via cell-cell contact (without diffusion), while Figure 6 corresponds to the diffusion case,
 implemented using the files `Cancer_No_Diffusion.cpp`, `Cancer_No_Diffusion.h` and `Cancer_Diffusion.cpp`, `Cancer_Diffusion.h`, respectively.
 
@@ -21,37 +22,37 @@ Input files include `param.in`, `kineticsparam.txt` and `GeneInteractionsMatrix.
 
 In `param.in`, the simulation parameters are defined as follows. More general information is provided in the Running the simulations section below
 
-	PRNG_SEED : random number generator seed
+- `PRNG_SEED` : random number generator seed
 
-`MAXTIME`: simulation time limit
+- `MAXTIME`: simulation time limit
 
-`MAXPOP`: maximum population size (if reached before the time limit); here set to 50,000 cells
+- `MAXPOP`: maximum population size (if reached before the time limit); here set to 50,000 cells
 
-`DT`: simulation time step
+- `DT`: simulation time step
 
-`ADD_POPULATION`: used to initialize the cell population, for example `"15 STEM CANCER MOBILE 10 1.0"` corresponds to 15 stem cells,
+- `ADD_POPULATION`: used to initialize the cell population, for example `"15 STEM CANCER MOBILE 10 1.0"` corresponds to 15 stem cells,
  cell type: cancer, movement type: mobile, time to reach double cell size: 10 hours, minimum cell volume: 1
 
-`WORLDSIZE`: simulation domain size; here set to 80 x 80 x80
+- `WORLDSIZE`: simulation domain size; here set to 80 x 80 x80
 
-The following signaling information is provided in the # Output parameters
+Some output information (implemented in the `get_output` function within `Cancer_No_Diffusion.cpp` or `Cancer_Diffusion.cpp`) can be accessed in the #Output parameters# section:
 
-`CANCER_TYPE`: equals 1 for stem cells and 0 for differentiated cells
+- `CANCER_TYPE`: equals 1 for stem cells and 0 for differentiated cells
 
-`STEM_CONTACT`: number of neighboring stem cells in contact with the stem cell; equals 0 for differentiated cells
+- `STEM_CONTACT`: number of neighboring stem cells in contact with the stem cell; equals 0 for differentiated cells
 
-`SYP_CONTACT`: number of neighboring differentiated cells in contact with the differentiated cell; equals 0 for stem cells
+- `SYP_CONTACT`: number of neighboring differentiated cells in contact with the differentiated cell; equals 0 for stem cells
 
-`S2 DIFFUSIVE 2 EPSILON 1e-2``: diffusive signaling from stem cells (S2), with a diffusion coefficient of 2 and an error tolerance of 0.01 
+- `S2 DIFFUSIVE 2 EPSILON 1e-2``: diffusive signaling from stem cells (S2), with a diffusion coefficient of 2 and an error tolerance of 0.01 
 (in the diffusion case, this `SIGNAL` must not be commented with #)
 
-`VOLUME`: cell volume
+- `VOLUME`: cell volume
 
-`REMEMBER_DIVISION`: greater than 0 if the cell is currently dividing
+- `REMEMBER_DIVISION`: greater than 0 if the cell is currently dividing
 
-`CANCER_S`, `CANCER_D1`, `CANCER_P`: protein levels of the genes CD133, SYP and Cyclin E, respectively
+- `CANCER_S`, `CANCER_D1`, `CANCER_P`: protein levels of the genes CD133, SYP and Cyclin E, respectively
 
-`CANCER_mRNA_S`, `CANCER_mRNA_D1`, `CANCER_mRNA_P`: mRNA levels of the genes CD133, SYP and Cyclin E, respectively
+- `CANCER_mRNA_S`, `CANCER_mRNA_D1`, `CANCER_mRNA_P`: mRNA levels of the genes CD133, SYP and Cyclin E, respectively
 
 
 
