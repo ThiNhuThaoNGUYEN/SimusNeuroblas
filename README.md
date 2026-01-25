@@ -20,7 +20,7 @@ implemented using the files `Cancer_No_Diffusion.cpp`, `Cancer_No_Diffusion.h` a
 
 Input files include `param.in`, `kineticsparam.txt` and `GeneInteractionsMatrix.txt`. 
 
-In `param.in`, the simulation parameters are defined as follows. More general information is provided in the [Running the simulations](#Running the simulations) section below
+In `param.in`, the simulation parameters are defined as follows. More general information is provided in the [Running the simulations](#Running-the-simulations) section below
 
 - `PRNG_SEED` : random number generator seed
 
