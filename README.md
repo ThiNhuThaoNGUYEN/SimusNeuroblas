@@ -24,39 +24,72 @@ In `param.in`, the simulation parameters are defined as follows. More general in
 
 - `PRNG_SEED` : random number generator seed
 
-- `MAXTIME`: simulation time limit
+- `MAXTIME` : simulation time limit
 
-- `MAXPOP`: maximum population size (if reached before the time limit); here set to 50,000 cells
+- `MAXPOP` : maximum population size (if reached before the time limit); here set to 50,000 cells
 
-- `DT`: simulation time step
+- `DT` : simulation time step
 
-- `ADD_POPULATION`: used to initialize the cell population, for example `"15 STEM CANCER MOBILE 10 1.0"` corresponds to 15 stem cells,
- cell type: cancer, movement type: mobile, time to reach double cell size: 10 hours, minimum cell volume: 1
+- `ADD_POPULATION` : used to initialize the cell population, for example `"15 STEM CANCER MOBILE 10 1.0"` corresponds to 15 stem cells,
+cell type: cancer, movement type: mobile, time to reach double cell size: 10 hours, minimum cell volume: 1
 
-- `WORLDSIZE`: simulation domain size; here set to 80 x 80 x80
+- `WORLDSIZE` : simulation domain size; here set to 80 x 80 x80
 
-Some output information (implemented in the `get_output` function within `Cancer_No_Diffusion.cpp` or `Cancer_Diffusion.cpp`) can be accessed in the #Output parameters# section:
+Some output information (implemented in the `get_output` function within `Cancer_No_Diffusion.cpp` or `Cancer_Diffusion.cpp`) can be accessed in the `# Output parameters` section:
 
-- `CANCER_TYPE`: equals 1 for stem cells and 0 for differentiated cells
+- `CANCER_TYPE` : equals 1 for stem cells and 0 for differentiated cells
 
-- `STEM_CONTACT`: number of neighboring stem cells in contact with the stem cell; equals 0 for differentiated cells
+- `STEM_CONTACT` : number of neighboring stem cells in contact with the stem cell; equals 0 for differentiated cells
 
-- `SYP_CONTACT`: number of neighboring differentiated cells in contact with the differentiated cell; equals 0 for stem cells
+- `SYP_CONTACT` : number of neighboring differentiated cells in contact with the differentiated cell; equals 0 for stem cells
 
-- `S2 DIFFUSIVE 2 EPSILON 1e-2``: diffusive signaling from stem cells (S2), with a diffusion coefficient of 2 and an error tolerance of 0.01 
+- `S2 DIFFUSIVE 2 EPSILON 1e-2` : diffusive signaling from stem cells (S2), with a diffusion coefficient of 2 and an error tolerance of 0.01 
 (in the diffusion case, this `SIGNAL` must not be commented with #)
 
-- `VOLUME`: cell volume
+- `VOLUME` : cell volume
 
-- `REMEMBER_DIVISION`: greater than 0 if the cell is currently dividing
+- `REMEMBER_DIVISION` : greater than 0 if the cell is currently dividing
 
-- `CANCER_S`, `CANCER_D1`, `CANCER_P`: protein levels of the genes CD133, SYP and Cyclin E, respectively
+- `CANCER_S`, `CANCER_D1`, `CANCER_P` : protein levels of the genes CD133, SYP and Cyclin E, respectively
 
-- `CANCER_mRNA_S`, `CANCER_mRNA_D1`, `CANCER_mRNA_P`: mRNA levels of the genes CD133, SYP and Cyclin E, respectively
-
-In `kineticsparam.txt`
+- `CANCER_mRNA_S`, `CANCER_mRNA_D1`, `CANCER_mRNA_P` : mRNA levels of the genes CD133, SYP and Cyclin E, respectively.
 
 
+The file `kineticsparam.txt` contains the kinetic input parameters used in the simulations:
+
+- `d0` : degradation rate of mRNA for all genes, set to 1 in this work.
+
+- `D1_s` : protein degradation rate of the gene CD133 (stem cell marker)
+
+- `d1` : protein degradation rate of the gene SYP (differentiated cell marker)
+
+- `a0`, `a1`, `a2` : default bursting parameters
+
+- `P_Diff`, `P_stem` : protein thresholds used as proliferation conditions for differentiated and stem cells
+
+- `D_stem` : differentiation threshold on CD133 protein level
+
+- `S_stem` : signaling strength for each stem-stem cell contact
+
+- `V_SS` : velocity when stem cells are in contact
+
+- `V_SD` : velocity applied when a stem and a differentiated cell encounter
+
+- `V_D` : velocity of interactions between two differentiated cells
+  
+- `V_normal` : normal cell velocity when there is no contact with other cells
+
+- `S_diff` : signaling strength for each differentiated-differentiated cell contact.
+
+
+The file `GeneInteractionsMatrix.txt` includes the interaction matrix between the 3 genes `GeneS`, `GeneD1`, and `GeneP`,
+coresponding respectively to CD133, SYP and Cyclin E.
+
+
+To reproduce Figure 4, use `Cancer_No_Diffusion.cpp`, `Cancer_No_Diffusion.h`, and set the input files with 
+the `MOBILE` cell type in `param.in`. The differentiation threshold `D_stem` varies between 0.001 and 0.005 (Figure 4A).
+Next, `D_stem` is fixed to 0.003, and the signaling strength `S_stem` is varied from 0 to 1.4 with a step size of 0.1 (Figure 4B).
+Finally, for each value of `D_stem` varying between 0.001 and 0.005, run simulations with `S_stem` varying from 0.1 to 0.5 (Figures 4C-F)
 
 Guide to Creating Figures 6A–D in the Neuroblastoma Paper
 ============== 
