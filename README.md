@@ -12,7 +12,7 @@ Motile: https://osf.io/25cy4/files/tz3xj
 Signalling diffusion with movement "Mobile": https://osf.io/25cy4/files/pzjgv
 
 
-Guide to run SimuScale for the Neuroblastoma project and reproduce Figures 4, 5, and 6
+Guide to run Simuscale for the Neuroblastoma project and reproduce Figures 4, 5, and 6
 ==============
 
 Figures 4 and 5 show signaling via cell-cell contact (without diffusion), while Figure 6 corresponds to the diffusion case,
@@ -20,7 +20,7 @@ implemented using the files `Cancer_No_Diffusion.cpp`, `Cancer_No_Diffusion.h` a
 
 Input files include `param.in`, `kineticsparam.txt` and `GeneInteractionsMatrix.txt`. 
 
-In `param.in`, the simulation parameters are defined as follows. More general information is provided in the Running the simulations section below
+In `param.in`, the simulation parameters are defined as follows. More general information is provided in the [Running the simulations](#Running the simulations) section below
 
 - `PRNG_SEED` : random number generator seed
 
@@ -54,7 +54,7 @@ Some output information (implemented in the `get_output` function within `Cancer
 
 - `CANCER_mRNA_S`, `CANCER_mRNA_D1`, `CANCER_mRNA_P`: mRNA levels of the genes CD133, SYP and Cyclin E, respectively
 
-
+In `kineticsparam.txt`
 
 
 
