@@ -108,7 +108,6 @@ To reproduce Figure 6, use `Cancer_Diffusion.cpp`, `Cancer_Diffusion.h`, and set
 the reachable area delta is varied from 1 to 2.5 in `param.in`.
 Next, `D_stem` is fixed to 0.004 in `kineticsparam.txt` (Figures 6A-D).  
 
-
 ##Guide to creating Figures 6A–D 
 
 Since running simulations in Simuscale in parallel is not yet available, the simulations must be 
