@@ -109,8 +109,7 @@ the reachable area delta is varied from 1 to 2.5 in `param.in`.
 Next, `D_stem` is fixed to 0.004 in `kineticsparam.txt` (Figures 6A-D).  
 
 
-##Guide to creating Figures 6A–D
-============== 
+##Guide to creating Figures 6A–D 
 
 Since running simulations in Simuscale in parallel is not yet available, the simulations must be 
 performed manually by creating multiple folders and using MPI to run the jobs.
