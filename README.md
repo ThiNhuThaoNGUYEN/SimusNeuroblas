@@ -106,10 +106,10 @@ All velocities are varied between 0 and 0.256 (Figures 5E–H).
 
 To reproduce Figure 6, use `Cancer_Diffusion.cpp`, `Cancer_Diffusion.h`, and set the `MOTILE` movement type,
 the reachable area delta is varied from 1 to 2.5 in `param.in`.
-Next, `D_stem` is fixed to 0.004 in `kineticsparam.txt` (Figures 6A-D)  
+Next, `D_stem` is fixed to 0.004 in `kineticsparam.txt` (Figures 6A-D).  
 
 
-Guide to Creating Figures 6A–D
+##Guide to creating Figures 6A–D
 ============== 
 
 Since running simulations in Simuscale in parallel is not yet available, the simulations must be 
@@ -148,7 +148,8 @@ Finally, copy file `plot_index.py` and run
 
 	python plot_index.py
 
-The mean and standard deviation of the four indices are computed, as shown in Figure 6A-D.
+The mean and standard deviation of the four indices are then computed.
+
 
 
 
