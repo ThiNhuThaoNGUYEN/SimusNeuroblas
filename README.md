@@ -15,12 +15,14 @@ Signalling diffusion with movement "Mobile": https://osf.io/25cy4/files/pzjgv
 Guide to run Simuscale for the Neuroblastoma project and reproduce Figures 4, 5, and 6
 ==============
 
-Figures 4 and 5 show signaling via cell-cell contact (without diffusion), while Figure 6 corresponds to the diffusion case,
-implemented using the files `Cancer_No_Diffusion.cpp`, `Cancer_No_Diffusion.h` and `Cancer_Diffusion.cpp`, `Cancer_Diffusion.h`, respectively.
+Figures 4 and 5 show signaling via cell-cell contact (without diffusion), while Figure 6 corresponds 
+to the diffusion case, implemented using the files `Cancer_No_Diffusion.cpp`, `Cancer_No_Diffusion.h` 
+and `Cancer_Diffusion.cpp`, `Cancer_Diffusion.h`, respectively.
 
 Input files include `param.in`, `kineticsparam.txt` and `GeneInteractionsMatrix.txt`. 
 
-In `param.in`, the simulation parameters are defined as follows. More general information is provided in the [Running the simulations](#Running-the-simulations) section below
+In `param.in`, the simulation parameters are defined as follows. More general information is provided 
+in the [Running the simulations](#Running-the-simulations) section below
 
 - `PRNG_SEED` : random number generator seed
 
@@ -30,21 +32,24 @@ In `param.in`, the simulation parameters are defined as follows. More general in
 
 - `DT` : simulation time step
 
-- `ADD_POPULATION` : used to initialize the cell population, for example `"15 STEM CANCER MOBILE 10 1.0"` corresponds to 15 stem cells,
-cell type: cancer, movement type: mobile, time to reach double cell size: 10 hours, minimum cell volume: 1
+- `ADD_POPULATION` : used to initialize the cell population, for example `"15 STEM CANCER MOBILE 10 1.0"` 
+corresponds to 15 stem cells, cell type: cancer, movement type: mobile, time to reach double cell size: 10 hours,
+minimum cell volume: 1
 
 - `WORLDSIZE` : simulation domain size; here set to 80 x 80 x80
 
-Some output information (implemented in the `get_output` function within `Cancer_No_Diffusion.cpp` or `Cancer_Diffusion.cpp`) can be accessed in the `# Output parameters` section:
+Some output information (implemented in the `get_output` function within `Cancer_No_Diffusion.cpp` or 
+`Cancer_Diffusion.cpp`) can be accessed in the `# Output parameters` section:
 
 - `CANCER_TYPE` : equals 1 for stem cells and 0 for differentiated cells
 
 - `STEM_CONTACT` : number of neighboring stem cells in contact with the stem cell; equals 0 for differentiated cells
 
-- `SYP_CONTACT` : number of neighboring differentiated cells in contact with the differentiated cell; equals 0 for stem cells
+- `SYP_CONTACT` : number of neighboring differentiated cells in contact with the differentiated cell; 
+equals 0 for stem cells
 
-- `S2 DIFFUSIVE 2 EPSILON 1e-2` : diffusive signaling from stem cells (S2), with a diffusion coefficient of 2 and an error tolerance of 0.01 
-(in the diffusion case, this `SIGNAL` must not be commented with #)
+- `S2 DIFFUSIVE 2 EPSILON 1e-2` : diffusive signaling from stem cells of type S2, with a reachable area delta = 2 and 
+an error tolerance of 0.01 (in the diffusion case, this `SIGNAL` must not be commented with #)
 
 - `VOLUME` : cell volume
 
@@ -87,23 +92,37 @@ coresponding respectively to CD133, SYP and Cyclin E.
 
 
 To reproduce Figure 4, use `Cancer_No_Diffusion.cpp`, `Cancer_No_Diffusion.h`, and set the input files with 
-the `MOBILE` cell type in `param.in`. The differentiation threshold `D_stem` varies between 0.001 and 0.005 (Figure 4A).
-Next, `D_stem` is fixed to 0.003, and the signaling strength `S_stem` is varied from 0 to 1.4 with a step size of 0.1 (Figure 4B).
-Finally, for each value of `D_stem` varying between 0.001 and 0.005, run simulations with `S_stem` varying from 0.1 to 0.5 (Figures 4C-F)
+the `MOBILE` cell type in `param.in`. The differentiation threshold `D_stem` varies between 0.001 and 0.005 
+in `kineticsparam.txt` (Figure 4A). Next, `D_stem` is fixed to 0.003, and the signaling strength `S_stem` 
+is varied from 0 to 1.4 with a step size of 0.1 (Figure 4B). Finally, for each value of `D_stem`
+varying between 0.001 and 0.005, run simulations with `S_stem` varying from 0.1 to 0.5 (Figures 4C-F)
 
-Guide to Creating Figures 6A–D in the Neuroblastoma Paper
+To reproduce Figure 5, use the `MOTILE` movement type in `param.in`.
+The velocities `V_SS = V_D` are varied from 0 to 1.024 with a step size of 0.004.
+For each case, `V_SD` is varied from 0 to 1.024 (Figures 5A–D).
+Next, `V_SD` and `V_D` are set equal, while `V_SS` differs.
+All velocities are varied between 0 and 0.256 (Figures 5E–H).
+
+
+To reproduce Figure 6, use `Cancer_Diffusion.cpp`, `Cancer_Diffusion.h`, and set the `MOTILE` movement type,
+the reachable area delta is varied from 1 to 2.5 in `param.in`.
+Next, `D_stem` is fixed to 0.004 in `kineticsparam.txt` (Figures 6A-D)  
+
+
+Guide to Creating Figures 6A–D
 ============== 
 
-Since running simulations in Simuscale in parallel is not yet available, the simulations must be performed manually by creating multiple folders and using MPI to run the jobs.
+Since running simulations in Simuscale in parallel is not yet available, the simulations must be 
+performed manually by creating multiple folders and using MPI to run the jobs.
 
 First, copy the file `Launch_cancer1.py` and the five input files `param_diffusive_1_1to5.in`
-(which use the same diffusion coefficient delta = 1, but different random seeds) outside
+(which use the same reachable area delta = 1, but different random seeds) outside
 the Neuroblastoma folder. Then run:
 
 	python Launch_cancer1.py
 
-Five new folders corresponding to the diffusion coefficient delta = 1 will be created.
-For other diffusion coefficients, repeat the same procedure.
+Five new folders corresponding to the reachable area delta = 1 will be created.
+For other values of delta, repeat the same procedure.
  
 
 Next, run the newly created Slurm batch script `mega_batch_type_K1.sh` using:
@@ -123,7 +142,7 @@ submitting the Slurm batch script:
 	
 	./mega_batch_data1.sh
 
-This procedure is applied to the remaining diffusion coefficient values: delta = 1.5, 2, 2.25, and 2.5.
+This procedure is applied to the remaining reachable area values: delta = 1.5, 2, 2.25, and 2.5.
 
 Finally, copy file `plot_index.py` and run
 
