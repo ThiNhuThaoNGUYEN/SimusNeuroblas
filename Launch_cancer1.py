@@ -10,7 +10,7 @@ npc=5 # number of parallel calculation
 
 for numero_simul in range(1,npc+1):
     os.makedirs( nom_dossiers+str(numero_simul) )
-    os.system("cp -r "+"../SimusNeuroblas"+" ./"+nom_dossiers+str(numero_simul)+"/.")
+    os.system("cp -r "+"SimusNeuroblas"+" ./"+nom_dossiers+str(numero_simul)+"/.")
 
     resol=open(nom_dossiers+str(numero_simul)+'/resol.sh','w')
     resol.write("#!/bin/bash\n")
